@@ -3,6 +3,33 @@
 All notable changes to AutoLogin Scheduler are documented here.  
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.0] — 2026-07-20 · Settings Links + Launchpad Fallback 🔗
+
+### Added
+- **Settings Quick Links Panel** — 12 clickable service cards (Resend, Brevo, Gmail SMTP, Cloudflare D1/R2/Workers/Cron, Backblaze B2, Turso, GitHub, Wrangler Docs)
+- **Inline API key badges** — “Get API Key” links next to Resend, Brevo, SMTP provider forms
+- **JWT Secret Generator** link updated to [Surakshit Vault Pro](https://surakshit-vault-pro.pages.dev/#jwt)
+- **Launchpad Smart Iframe Fallback** — auto-detects X-Frame-Options DENY sites within 4 seconds
+- **Auto-Launch button** — one click opens blocked site in new tab + auto-copies decrypted password to clipboard
+- **metadataBase** set for correct OG/Twitter social media preview images
+- **Twitter card metadata** added for rich social sharing previews
+- **`/api/logs/manual`** correctly wired in Hono gateway router (was 404 on some edge nodes)
+- **Wrangler v4 upgrade** (`wrangler@3` → `wrangler@4`, `@cloudflare/workers-types@4` → `v5`)
+- **PrismAnalytics** tracking integration in landing page and dashboard
+- **FormForge** contact form embedded in landing page
+- `database_id` cleared in `wrangler.toml` for clean one-click deploy compatibility
+
+### Fixed
+- `Bucket` and `Github` lucide-react icon names corrected to `HardDrive` and `GitBranch`
+- Launchpad manual log endpoint returning 404 on edge deployments
+- `metadataBase` warning on every Next.js build
+
+### Upgraded
+- `wrangler` 3.114.17 → 4.112.0
+- `@cloudflare/workers-types` 4.x → 5.x
+
+---
+
 ## [1.0.0] — 2026-07-20 · First Light 🚀
 
 ### Added

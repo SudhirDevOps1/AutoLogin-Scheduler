@@ -10,10 +10,11 @@
 
 <p align="center">
   <a href="https://github.com/SudhirDevOps1/AutoLogin-Scheduler/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-violet?style=flat-square" alt="MIT License"/></a>
-  <a href="https://github.com/SudhirDevOps1/AutoLogin-Scheduler/releases"><img src="https://img.shields.io/badge/version-1.0.0-blue?style=flat-square" alt="v1.0.0"/></a>
+  <a href="https://github.com/SudhirDevOps1/AutoLogin-Scheduler/releases"><img src="https://img.shields.io/badge/version-1.2.0-blue?style=flat-square" alt="v1.2.0"/></a>
   <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square" alt="Next.js 16"/></a>
   <a href="https://workers.cloudflare.com"><img src="https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-orange?style=flat-square" alt="Cloudflare"/></a>
   <a href="https://orm.drizzle.team"><img src="https://img.shields.io/badge/Drizzle-ORM-blue?style=flat-square" alt="Drizzle"/></a>
+  <img src="https://img.shields.io/badge/Status-Fully%20Working-success?style=flat-square" alt="Status"/>
 </p>
 
 <p align="center">
@@ -124,6 +125,16 @@ npm run dev
 - ✅ **Browser Rendering** — Cloudflare Puppeteer on the edge
 - ✅ **One-click deploy** button (see above)
 - ✅ **R2/S3 optional** — screenshots stored anywhere or nowhere
+
+### 🔗 Settings Quick Links Panel *(v1.2.0)*
+- ✅ **12 clickable service cards** — Resend, Brevo, Gmail, Cloudflare D1/R2/Workers, Backblaze B2, Turso, GitHub, JWT Generator, Wrangler Docs
+- ✅ **Inline API key badges** — next to Resend/Brevo/SMTP forms for instant navigation
+- ✅ **JWT Secret via [Surakshit Vault Pro](https://surakshit-vault-pro.pages.dev/#jwt)**
+
+### 🛡️ Launchpad Smart Fallback *(v1.2.0)*
+- ✅ **Auto-detects blocked iframes** — 4-second timeout with graceful fallback UI
+- ✅ **Auto-Launch button** — opens site in new tab + auto-copies password to clipboard in one click
+- ✅ **Works with any site** including mega.nz, Gmail, banking sites that block embedding
 
 ---
 
@@ -290,25 +301,57 @@ Full details: [ADMIN_GUIDE.md](ADMIN_GUIDE.md)
 
 ### Manual Deploy (CLI)
 ```bash
-# 1. Install Wrangler
-npm install -g wrangler
+# 1. Install Wrangler v4
+npm install -g wrangler@4
 
-# 2. Login
+# 2. Login to Cloudflare
 wrangler login
 
 # 3. Create D1 database
+#    → Go to: https://dash.cloudflare.com/?to=/:account/workers/d1
+#    OR via CLI:
 wrangler d1 create autologin-db
-# → Copy database_id to wrangler.toml
+# Copy the database_id printed and paste into wrangler.toml
 
-# 4. Set secrets
+# 4. (Optional) Create R2 bucket for screenshots
+#    → Go to: https://dash.cloudflare.com/?to=/:account/r2
+#    OR via CLI:
+wrangler r2 bucket create autologin-screenshots
+
+# 5. Set required secrets
+#    Generate AUTH_SECRET at: https://surakshit-vault-pro.pages.dev/#jwt
 wrangler secret put AUTH_SECRET
 wrangler secret put ENCRYPTION_SECRET
+wrangler secret put ADMIN_EMAIL
 wrangler secret put ADMIN_PASSWORD
 
-# 5. Deploy
+# 6. (Optional) Email alerts — Resend: https://resend.com/api-keys
+wrangler secret put RESEND_API_KEY
+wrangler secret put RESEND_FROM
+
+# 7. (Optional) Email alerts — Brevo: https://app.brevo.com/settings/keys/api
+wrangler secret put BREVO_API_KEY
+wrangler secret put BREVO_FROM
+
+# 8. Build and deploy
+npm install
 npm run build
-wrangler deploy
+wrangler deploy --assets out/
+
+# 9. Run DB schema migration
+wrangler d1 execute autologin-db --remote --file=schema.sql
 ```
+
+### After Deploy — Quick Setup
+| Step | What to do | Where |
+|------|------------|-------|
+| 1 | Login with your `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `/login` |
+| 2 | Go to Settings → Email Alerts | `/dashboard/settings` |
+| 3 | Pick Resend or Brevo and paste API key | Settings page |
+| 4 | Add your first credential (website login) | `/dashboard/credentials` |
+| 5 | Create a schedule for that credential | `/dashboard/schedules` |
+| 6 | Click "Trigger Now" to test auto-login | `/dashboard/schedules` |
+| 7 | Check logs to confirm success | `/dashboard/logs` |
 
 ### Turso Deploy (Serverless SQLite)
 Same as PostgreSQL but with `libsql://` URL — see [Multi-Database Support](#-multi-database-support).
@@ -338,6 +381,9 @@ See [`.env.example`](.env.example) for full template.
 
 > [!NOTE]
 > **Email Alerts Configuration:** Email configurations can also be dynamically modified inside the browser UI (**Settings** page). UI-configured values (stored in the database) will take precedence over environment variables, allowing live updates without redeploying.
+
+> [!TIP]
+> **Quick Links:** The Settings page has a built-in **Quick Links panel** with direct links to Resend, Brevo, Cloudflare D1/R2, Backblaze B2, Turso, and more — click any card to open the relevant dashboard instantly.
 
 ---
 

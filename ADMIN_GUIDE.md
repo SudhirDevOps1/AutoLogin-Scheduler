@@ -1,4 +1,4 @@
-# AutoLogin Scheduler — Developer Guide
+# AutoLogin Scheduler v1.2.0 — Developer Guide
 
 > Line-by-line reference for developers. Every file, every config, every edit point.
 
@@ -32,11 +32,15 @@
 | `credentials/route.ts` | GET, POST, PUT, DELETE | Session |
 | `schedules/route.ts` | GET, POST, PUT, DELETE | Session |
 | `logs/route.ts` | GET | Session |
+| `logs/manual/route.ts` | POST | Session |
 | `trigger/route.ts` | POST, PUT | Session / Cron |
 | `demo/route.ts` | GET, POST | Session |
 | `admin/overview/route.ts` | GET | Admin |
 | `health/route.ts` | GET | Public |
 | `version/route.ts` | GET | Public |
+| `settings/route.ts` | GET, POST | Session |
+| `credentials/reveal/route.ts` | GET | Session |
+| `screenshots/[...key]/route.ts` | GET | Session |
 
 ### Frontend Pages (`src/app/`)
 | Page File | Route |

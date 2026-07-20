@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   return NextResponse.json({
     name: "AutoLogin Scheduler",
-    version: "1.0.0",
+    version: "1.2.0",
     author: "Sudhir Singh",
     github: "https://github.com/SudhirDevOps1/AutoLogin-Scheduler",
     fakeData: false,
