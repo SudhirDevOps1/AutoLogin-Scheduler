@@ -4,6 +4,18 @@ import { eq } from "drizzle-orm";
 import { config } from "./config";
 import { decryptCredential } from "./security";
 
+// Safe import of Cloudflare TCP Sockets helper only when running on worker
+let connectFn: any = null;
+if (typeof process === "undefined" || !process.release || process.release.name !== "node") {
+  try {
+    const socketsModule = "cloudflare:sockets";
+    const sockets = require(socketsModule);
+    connectFn = sockets.connect;
+  } catch (e) {
+    // Fail silently in development
+  }
+}
+
 interface EmailAlertParams {
   userId: string;
   toEmail: string;
@@ -13,6 +25,119 @@ interface EmailAlertParams {
   isManual: boolean;
   success?: boolean;
   error?: string | null;
+}
+
+// Custom lightweight SMTP protocol client over Cloudflare TCP sockets for Cloudflare Workers
+async function sendSmtpOverWorkerSocket(
+  host: string,
+  port: number,
+  user: string,
+  pass: string,
+  from: string,
+  to: string,
+  subject: string,
+  html: string
+) {
+  if (!connectFn) {
+    throw new Error("Cloudflare sockets connect API is unavailable in this environment.");
+  }
+
+  // SMTPS (port 465) requires TLS immediate connection on Cloudflare
+  const useTls = port === 465;
+  const socket = connectFn(
+    { hostname: host, port },
+    useTls ? { secureTransport: "on" } : {}
+  );
+
+  const writer = socket.writable.getWriter();
+  const reader = socket.readable.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+
+  let buffer = "";
+  async function readLine(): Promise<string> {
+    while (!buffer.includes("\r\n")) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value);
+    }
+    const idx = buffer.indexOf("\r\n");
+    if (idx === -1) return buffer;
+    const line = buffer.substring(0, idx);
+    buffer = buffer.substring(idx + 2);
+    return line;
+  }
+
+  async function writeCmd(cmd: string) {
+    await writer.write(encoder.encode(cmd));
+  }
+
+  try {
+    // 1. Read greeting
+    let line = await readLine();
+    if (!line.startsWith("220")) throw new Error(`SMTP Greeting failed: ${line}`);
+
+    // 2. EHLO
+    await writeCmd("EHLO localhost\r\n");
+    while (true) {
+      line = await readLine();
+      if (line[3] !== "-") break;
+    }
+
+    // 3. AUTH LOGIN
+    await writeCmd("AUTH LOGIN\r\n");
+    line = await readLine();
+    if (!line.startsWith("334")) throw new Error(`AUTH LOGIN initialization failed: ${line}`);
+
+    // Send Base64 Username
+    await writeCmd(btoa(user) + "\r\n");
+    line = await readLine();
+    if (!line.startsWith("334")) throw new Error(`Username rejected: ${line}`);
+
+    // Send Base64 Password
+    await writeCmd(btoa(pass) + "\r\n");
+    line = await readLine();
+    if (!line.startsWith("235")) throw new Error(`Password rejected / Authentication failed: ${line}`);
+
+    // 4. MAIL FROM
+    await writeCmd(`MAIL FROM:<${from}>\r\n`);
+    line = await readLine();
+    if (!line.startsWith("250")) throw new Error(`MAIL FROM command failed: ${line}`);
+
+    // 5. RCPT TO
+    await writeCmd(`RCPT TO:<${to}>\r\n`);
+    line = await readLine();
+    if (!line.startsWith("250")) throw new Error(`RCPT TO command failed: ${line}`);
+
+    // 6. DATA
+    await writeCmd("DATA\r\n");
+    line = await readLine();
+    if (!line.startsWith("354")) throw new Error(`DATA start rejected: ${line}`);
+
+    // Send MIME headers and HTML body
+    const emailContent = [
+      `From: ${from}`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      "MIME-Version: 1.0",
+      "Content-Type: text/html; charset=utf-8",
+      "",
+      html,
+      ".",
+      ""
+    ].join("\r\n");
+
+    await writeCmd(emailContent);
+    line = await readLine();
+    if (!line.startsWith("250")) throw new Error(`Sending message payload failed: ${line}`);
+
+    // 7. QUIT
+    await writeCmd("QUIT\r\n");
+  } finally {
+    try {
+      socket.close();
+    } catch (_) {}
+  }
 }
 
 export async function sendEmailAlert({
@@ -25,7 +150,6 @@ export async function sendEmailAlert({
   success,
   error
 }: EmailAlertParams) {
-  // 1. Fetch custom user settings from database
   let provider = "disabled";
   let apiKey = "";
   let fromEmail = "alerts@yourdomain.com";
@@ -60,10 +184,9 @@ export async function sendEmailAlert({
       }
     }
   } catch (dbErr) {
-    console.error("[email] Failed to query user settings from DB, using env fallback:", dbErr);
+    console.error("[email] Failed to query settings, using env fallback:", dbErr);
   }
 
-  // 2. Fallback to Env Variables if no custom database provider is configured
   if (provider === "disabled") {
     if (config.RESEND_API_KEY) {
       provider = "resend";
@@ -77,12 +200,11 @@ export async function sendEmailAlert({
       smtpPass = config.SMTP_PASS || "";
       fromEmail = config.SMTP_FROM || fromEmail;
     } else {
-      console.warn("[email] No email provider (UI or Env) configured. Alert skipped.");
+      console.warn("[email] No email provider configured.");
       return;
     }
   }
 
-  // 3. Construct Email Contents
   const host = "https://autologin-scheduler.sudhirdevops1.workers.dev";
   const actionLink = `${host}/dashboard/launchpad?id=${credentialId}&action=login`;
 
@@ -100,14 +222,11 @@ export async function sendEmailAlert({
             One-Click Login (Launchpad)
           </a>
         </div>
-        <p style="color: #64748b; font-size: 14px;">This link will open the website and copy your login credentials to your dashboard launchpad.</p>
+        <p style="color: #64748b; font-size: 14px;">This link will open the website and copy your login credentials.</p>
       </div>
     `;
   } else {
-    subject = success 
-      ? `✅ Auto-Login Success: ${credentialName}`
-      : `❌ Auto-Login Failed: ${credentialName}`;
-    
+    subject = success ? `✅ Auto-Login Success: ${credentialName}` : `❌ Auto-Login Failed: ${credentialName}`;
     htmlContent = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;">
         <h2 style="color: ${success ? "#10b981" : "#ef4444"}; margin-top: 0;">Auto-Login ${success ? "Succeeded" : "Failed"}</h2>
@@ -122,7 +241,6 @@ export async function sendEmailAlert({
     `;
   }
 
-  // 4. Send Email based on active provider
   if (provider === "resend") {
     try {
       const res = await fetch("https://api.resend.com/emails", {
@@ -134,16 +252,11 @@ export async function sendEmailAlert({
         body: JSON.stringify({
           from: fromEmail,
           to: toEmail,
-          subject: subject,
+          subject,
           html: htmlContent
         })
       });
-
-      if (!res.ok) {
-        console.error("[email] Resend API error:", await res.text());
-      } else {
-        console.log(`[email] Resend alert email sent to ${toEmail}`);
-      }
+      if (!res.ok) console.error("[email] Resend API error:", await res.text());
     } catch (err) {
       console.error("[email] Resend fetch failed:", err);
     }
@@ -158,16 +271,11 @@ export async function sendEmailAlert({
         body: JSON.stringify({
           sender: { email: fromEmail },
           to: [{ email: toEmail }],
-          subject: subject,
-          htmlContent: htmlContent
+          subject,
+          htmlContent
         })
       });
-
-      if (!res.ok) {
-        console.error("[email] Brevo API error:", await res.text());
-      } else {
-        console.log(`[email] Brevo alert email sent to ${toEmail}`);
-      }
+      if (!res.ok) console.error("[email] Brevo API error:", await res.text());
     } catch (err) {
       console.error("[email] Brevo fetch failed:", err);
     }
@@ -181,24 +289,25 @@ export async function sendEmailAlert({
           host: smtpHost,
           port: smtpPort,
           secure: smtpPort === 465,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass
-          }
+          auth: { user: smtpUser, pass: smtpPass }
         });
         await transporter.sendMail({
           from: fromEmail,
           to: toEmail,
-          subject: subject,
+          subject,
           html: htmlContent
         });
-        console.log(`[email] SMTP alert email sent to ${toEmail} (Node.js)`);
       } catch (err) {
         console.error("[email] SMTP nodemailer delivery failed:", err);
       }
     } else {
-      console.warn("[email] Custom SMTP TCP sockets are restricted on Cloudflare edge. Log payload:");
-      console.log(`[SMTP SIMULATION] To: ${toEmail} | Subject: ${subject}`);
+      // Cloudflare Workers: send directly using custom socket connection
+      try {
+        await sendSmtpOverWorkerSocket(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail, toEmail, subject, htmlContent);
+        console.log(`[email] SMTP alert email successfully sent to ${toEmail} via Worker TCP Sockets!`);
+      } catch (err) {
+        console.error("[email] SMTP worker socket delivery failed:", err);
+      }
     }
   }
 }
@@ -285,6 +394,9 @@ export async function sendTestEmail({
       throw new Error(`Brevo API: ${errText}`);
     }
   } else if (emailProvider === "smtp") {
+    if (!smtpHost || !smtpUser || !smtpPass) {
+      throw new Error("SMTP host, user, and password are required.");
+    }
     const isNode = typeof process !== "undefined" && process.release && process.release.name === "node";
     if (isNode) {
       try {
@@ -294,10 +406,7 @@ export async function sendTestEmail({
           host: smtpHost,
           port: smtpPort,
           secure: smtpPort === 465,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass
-          }
+          auth: { user: smtpUser, pass: smtpPass }
         });
         await transporter.sendMail({
           from: smtpFrom || "notifications@yourdomain.com",
@@ -306,12 +415,15 @@ export async function sendTestEmail({
           html: htmlContent
         });
       } catch (err: any) {
-        throw new Error(`SMTP Load Error: ${err.message || err}. Custom SMTP is only supported on a native Node.js server. Please use Resend or Brevo on Cloudflare Workers.`);
+        throw new Error(`Local SMTP Error: ${err.message}`);
       }
     } else {
-      throw new Error(
-        "Custom SMTP TCP port socket outbound streams are blocked on Cloudflare edge. Use Resend or Brevo HTTP API modes instead."
-      );
+      // Cloudflare Workers direct sockets implementation
+      try {
+        await sendSmtpOverWorkerSocket(smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom || "notifications@yourdomain.com", toEmail, subject, htmlContent);
+      } catch (err: any) {
+        throw new Error(`Worker SMTP Error: ${err.message || err}. (Note: SMTP Port 465 with SSL is recommended on Cloudflare Workers)`);
+      }
     }
   } else {
     throw new Error(`Invalid email provider: ${emailProvider}`);
