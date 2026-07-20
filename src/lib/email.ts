@@ -6,14 +6,12 @@ import { decryptCredential } from "./security";
 
 // Safe import of Cloudflare TCP Sockets helper only when running on worker
 let connectFn: any = null;
-if (typeof process === "undefined" || !process.release || process.release.name !== "node") {
-  try {
-    const socketsModule = "cloudflare:sockets";
-    const sockets = require(socketsModule);
-    connectFn = sockets.connect;
-  } catch (e) {
-    // Fail silently in development
-  }
+try {
+  const socketsModule = "cloudflare:sockets";
+  const sockets = require(socketsModule);
+  connectFn = sockets.connect;
+} catch (e) {
+  // Fail silently in development/native Node.js
 }
 
 interface EmailAlertParams {
