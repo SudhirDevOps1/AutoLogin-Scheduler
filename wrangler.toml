@@ -1,0 +1,47 @@
+# ─── AutoLogin Scheduler — Cloudflare Worker Config ──────────────────
+# Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+
+
+name = "autologin-scheduler"
+main = "src/worker/index.ts"
+compatibility_date = "2026-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── D1 Database (required) ─────────────────────────────────────────────
+# Serverless SQLite, 5 GB free tier.
+# Create with: npx wrangler d1 create autologin-db
+# Then paste the database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "autologin-db"
+database_id = ""
+# ^ Leave empty for auto-provision via wrangler deploy
+
+# ─── R2 Bucket (OPTIONAL — comment out if not used) ─────────────────────
+# [[r2_buckets]]
+# binding = "FILES_BUCKET"
+# bucket_name = "autologin-screenshots"
+
+# ─── Cron Triggers ──────────────────────────────────────────────────────
+# Checks for due schedules every 6 hours.
+[triggers]
+crons = ["0 */6 * * *"]
+
+# ─── Browser Rendering (for Puppeteer auto-login) ───────────────────────
+[browser]
+binding = "BROWSER"
+
+# ─── Environment Variables ──────────────────────────────────────────────
+# Secrets (use `wrangler secret put`):
+#   AUTH_SECRET      : required — JWT signing secret
+#   JWT_SECRET       : fallback — same as AUTH_SECRET
+#   ADMIN_EMAIL      : optional — env-based admin bypass
+#   ADMIN_PASSWORD   : optional — env-based admin password
+#   RESEND_API_KEY   : optional — email alerts
+#   RESEND_FROM      : optional — sender email
+#   S3_ACCESS_KEY_ID : optional — R2 upload
+#   S3_SECRET_ACCESS_KEY : optional
+
+[vars]
+ALLOW_REGISTRATION = "true"
+FAKE_DATA = "true"
