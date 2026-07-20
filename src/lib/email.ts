@@ -287,23 +287,27 @@ export async function sendTestEmail({
   } else if (emailProvider === "smtp") {
     const isNode = typeof process !== "undefined" && process.release && process.release.name === "node";
     if (isNode) {
-      const moduleName = "nodemailer";
-      const nodemailer = require(moduleName);
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        auth: {
-          user: smtpUser,
-          pass: smtpPass
-        }
-      });
-      await transporter.sendMail({
-        from: smtpFrom || "notifications@yourdomain.com",
-        to: toEmail,
-        subject,
-        html: htmlContent
-      });
+      try {
+        const moduleName = "nodemailer";
+        const nodemailer = require(moduleName);
+        const transporter = nodemailer.createTransport({
+          host: smtpHost,
+          port: smtpPort,
+          secure: smtpPort === 465,
+          auth: {
+            user: smtpUser,
+            pass: smtpPass
+          }
+        });
+        await transporter.sendMail({
+          from: smtpFrom || "notifications@yourdomain.com",
+          to: toEmail,
+          subject,
+          html: htmlContent
+        });
+      } catch (err: any) {
+        throw new Error(`SMTP Load Error: ${err.message || err}. Custom SMTP is only supported on a native Node.js server. Please use Resend or Brevo on Cloudflare Workers.`);
+      }
     } else {
       throw new Error(
         "Custom SMTP TCP port socket outbound streams are blocked on Cloudflare edge. Use Resend or Brevo HTTP API modes instead."
