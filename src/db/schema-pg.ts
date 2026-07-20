@@ -162,6 +162,22 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
 }));
 
+// ─── User Settings ─────────────────────────────────────────────────────────
+export const userSettings = pgTable("user_settings", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  emailProvider: text("email_provider").default("disabled").notNull(),
+  resendApiKey: text("resend_api_key"),
+  resendFrom: text("resend_from"),
+  smtpHost: text("smtp_host"),
+  smtpPort: integer("smtp_port"),
+  smtpUser: text("smtp_user"),
+  smtpPass: text("smtp_pass"),
+  smtpFrom: text("smtp_from"),
+  brevoApiKey: text("brevo_api_key"),
+  brevoFrom: text("brevo_from"),
+  updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
+});
+
 // ─── Rate Limits ────────────────────────────────────────────────────────────
 export const rateLimits = pgTable("rate_limits", {
   key: text("key").primaryKey(),
@@ -179,3 +195,5 @@ export type NewSchedule = typeof schedules.$inferInsert;
 export type LoginLog = typeof loginLogs.$inferSelect;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type RateLimit = typeof rateLimits.$inferSelect;
+export type UserSettings = typeof userSettings.$inferSelect;
+export type NewUserSettings = typeof userSettings.$inferInsert;

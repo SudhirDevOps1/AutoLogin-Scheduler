@@ -335,6 +335,9 @@ Same as PostgreSQL but with `libsql://` URL — see [Multi-Database Support](#-m
 
 See [`.env.example`](.env.example) for full template.
 
+> [!NOTE]
+> **Email Alerts Configuration:** Email configurations can also be dynamically modified inside the browser UI (**Settings** page). UI-configured values (stored in the database) will take precedence over environment variables, allowing live updates without redeploying.
+
 ---
 
 ## 📁 File Structure & Editing Guide

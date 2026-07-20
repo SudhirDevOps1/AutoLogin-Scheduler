@@ -137,6 +137,7 @@ export async function POST(req: NextRequest) {
         (willSucceed && sched.alertOnSuccess);
       if (shouldAlert) {
         await sendEmailAlert({
+          userId: auth.userId,
           toEmail: auth.email,
           credentialName: cred.name,
           siteUrl: cred.siteUrl,
@@ -201,6 +202,7 @@ export async function PUT(req: NextRequest) {
         siteUrl: credentials.siteUrl,
         name: credentials.name,
         userEmail: users.email,
+        userId: users.id,
       })
       .from(schedules)
       .innerJoin(credentials, eq(schedules.credentialId, credentials.id))
@@ -274,6 +276,7 @@ export async function PUT(req: NextRequest) {
 
       if (alertQueued) {
         await sendEmailAlert({
+          userId: sched.userId,
           toEmail: sched.userEmail,
           credentialName: sched.name,
           siteUrl: sched.siteUrl,

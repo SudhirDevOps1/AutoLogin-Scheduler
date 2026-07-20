@@ -23,6 +23,7 @@ export const schedules = active.schedules as typeof pgSchema.schedules;
 export const loginLogs = active.loginLogs as typeof pgSchema.loginLogs;
 export const auditLogs = active.auditLogs as typeof pgSchema.auditLogs;
 export const rateLimits = active.rateLimits as typeof pgSchema.rateLimits;
+export const userSettings = active.userSettings as typeof pgSchema.userSettings;
 
 export type User = pgSchema.User;
 export type NewUser = pgSchema.NewUser;
@@ -34,3 +35,5 @@ export type NewSchedule = pgSchema.NewSchedule;
 export type LoginLog = pgSchema.LoginLog;
 export type AuditLog = pgSchema.AuditLog;
 export type RateLimit = pgSchema.RateLimit;
+export type UserSettings = pgSchema.UserSettings;
+export type NewUserSettings = pgSchema.NewUserSettings;

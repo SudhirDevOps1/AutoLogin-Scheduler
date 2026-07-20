@@ -136,10 +136,12 @@ For D1 deploy, see `wrangler.toml` and `src/worker/index.ts`.
 
 ## 📧 Email Alerts & One-Click Actions (`src/lib/email.ts`)
 
-The email alert module integrates with the **Resend API** to send emails in Cloudflare Workers using standard HTTP POST requests:
-* **Manual Interventions:** Sends a rich email alert when a schedule is due in Launchpad (manual) mode.
-* **One-Click Quick Login Link:** The alert contains a secure link pointing to `/dashboard/launchpad?id=<credentialId>&action=login`.
-* **Launchpad Automation:** Loading this URL automatically reveals/decrypts the credentials and renders a quick action button to copy the username and open the website in a new tab.
+The email alert module supports dual configuration:
+1. **Database-Backed Settings (`user_settings` table):** Scoped per user. Users can dynamically configure **Resend**, **Brevo**, or **SMTP** configurations in the Browser Settings UI.
+   - API endpoints (`GET/POST /api/settings`) handle CRUD operations.
+   - Sensitive credentials (like API Keys and SMTP Passwords) are encrypted using **AES-256-GCM** before saving to the database.
+2. **Environment Fallbacks:** If the UI configuration is set to `Disabled`, the module falls back to read default global keys from environment variables (`config.RESEND_API_KEY`, `config.SMTP_HOST`, etc.).
+3. **One-Click Quick Login Link:** Sent manual login alerts contain a secure link pointing to `/dashboard/launchpad?id=<credentialId>&action=login`, automating password decryption and launching the launchpad quick actions panel.
 
 ---
 

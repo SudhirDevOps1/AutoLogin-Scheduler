@@ -19,6 +19,7 @@ import { GET as getSchedules, POST as postSchedules, PUT as putSchedules, DELETE
 import { GET as getLogs } from "../app/api/logs/route";
 import { POST as postTrigger, PUT as putTrigger } from "../app/api/trigger/route";
 import { GET as getAdminOverview } from "../app/api/admin/overview/route";
+import { GET as getSettings, POST as postSettings } from "../app/api/settings/route";
 
 export interface Env {
   DB: D1Database;
@@ -110,9 +111,9 @@ app.get("/api/logs", (c) => wrap(getLogs, c));
 // ─── Trigger / Cron ───────────────────────────────────────────────────────
 app.post("/api/trigger", (c) => wrap(postTrigger, c));
 app.put("/api/trigger", (c) => wrap(putTrigger, c));
-
-
-
+// ─── Settings ─────────────────────────────────────────────────────────────
+app.get("/api/settings", (c) => wrap(getSettings, c));
+app.post("/api/settings", (c) => wrap(postSettings, c));
 // ─── Admin Overview ───────────────────────────────────────────────────────
 app.get("/api/admin/overview", (c) => wrap(getAdminOverview, c));
 
