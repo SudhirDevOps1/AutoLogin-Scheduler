@@ -103,6 +103,7 @@ export const schedules = sqliteTable(
       .notNull()
       .references(() => credentials.id, { onDelete: "cascade" }),
     cronExpr: text("cron_expr").notNull(),
+    executionMode: text("execution_mode").default("auto").notNull(),
     nextRun: integer("next_run").notNull(),
     enabled: integer("enabled", { mode: "boolean" }).default(true).notNull(),
     alertOnFailure: integer("alert_on_failure", { mode: "boolean" }).default(true).notNull(),
