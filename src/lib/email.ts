@@ -131,28 +131,89 @@ export async function sendEmailAlert({
   if (isManual) {
     subject = `🔑 Action Required: Manual Login to ${credentialName}`;
     htmlContent = `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;">
-        <h2 style="color: #6366f1; margin-top: 0;">Manual Login Required</h2>
-        <p>It is time to log in to <strong>${credentialName}</strong> (${siteUrl}).</p>
-        <div style="margin: 24px 0;">
-          <a href="${actionLink}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            One-Click Login (Launchpad)
-          </a>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; padding: 40px 20px; min-height: 100%;">
+        <div style="max-width: 560px; margin: 0 auto; background-color: #1e293b; border: 1px solid #334155; border-top: 4px solid #6366f1; border-radius: 12px; padding: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);">
+          <div style="margin-bottom: 24px; text-align: center; font-size: 20px; font-weight: bold; color: #f8fafc; letter-spacing: 0.5px;">
+            🔐 AutoLogin <span style="color: #6366f1;">Scheduler</span>
+          </div>
+          <div style="display: inline-block; background-color: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); color: #818cf8; font-size: 10px; font-weight: bold; text-transform: uppercase; padding: 4px 10px; border-radius: 9999px; margin-bottom: 16px; letter-spacing: 0.5px;">
+            Manual Intervention Needed
+          </div>
+          <h2 style="color: #f8fafc; font-size: 20px; font-weight: 700; margin: 0 0 12px 0;">Action Required: Manual Login</h2>
+          <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0;">
+            It is time to execute a manual check-in or login session for your credential. Please click the button below to launch the split-screen companion workspace.
+          </p>
+          <div style="background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 28px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #e2e8f0;">
+              <tr>
+                <td style="color: #64748b; padding: 6px 0; font-weight: 500;">Credential Name</td>
+                <td style="font-weight: 600; text-align: right;">${credentialName}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b; padding: 6px 0; font-weight: 500;">Target URL</td>
+                <td style="text-align: right;"><a href="${siteUrl}" style="color: #818cf8; text-decoration: none; font-weight: 600;">${siteUrl.replace(/https?:\/\//, "")}</a></td>
+              </tr>
+            </table>
+          </div>
+          <div style="text-align: center; margin-bottom: 24px;">
+            <a href="${actionLink}" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #ffffff; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 8px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+              One-Click Login (Launchpad)
+            </a>
+          </div>
+          <p style="color: #64748b; font-size: 11px; line-height: 1.5; margin: 0; text-align: center;">
+            This link securely loads your decrypted parameters directly inside the sandboxed companion workspace. Do not share this email.
+          </p>
         </div>
-        <p style="color: #64748b; font-size: 14px;">This link will open the website and copy your login credentials.</p>
       </div>
     `;
   } else {
     subject = success ? `✅ Auto-Login Success: ${credentialName}` : `❌ Auto-Login Failed: ${credentialName}`;
+    const badgeColor = success ? "#10b981" : "#ef4444";
+    const badgeBg = success ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)";
+    const badgeBorder = success ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)";
+    const headerBorder = success ? "#10b981" : "#ef4444";
+
     htmlContent = `
-      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;">
-        <h2 style="color: ${success ? "#10b981" : "#ef4444"}; margin-top: 0;">Auto-Login ${success ? "Succeeded" : "Failed"}</h2>
-        <p>Credential: <strong>${credentialName}</strong> (${siteUrl})</p>
-        ${!success ? `<p style="color: #ef4444;"><strong>Error:</strong> ${error || "Unknown error"}</p>` : ""}
-        <div style="margin: 24px 0;">
-          <a href="${actionLink}" style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            Open Launchpad
-          </a>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; padding: 40px 20px; min-height: 100%;">
+        <div style="max-width: 560px; margin: 0 auto; background-color: #1e293b; border: 1px solid #334155; border-top: 4px solid ${headerBorder}; border-radius: 12px; padding: 32px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);">
+          <div style="margin-bottom: 24px; text-align: center; font-size: 20px; font-weight: bold; color: #f8fafc; letter-spacing: 0.5px;">
+            🔐 AutoLogin <span style="color: #6366f1;">Scheduler</span>
+          </div>
+          <div style="display: inline-block; background-color: ${badgeBg}; border: 1px solid ${badgeBorder}; color: ${badgeColor}; font-size: 10px; font-weight: bold; text-transform: uppercase; padding: 4px 10px; border-radius: 9999px; margin-bottom: 16px; letter-spacing: 0.5px;">
+            Auto-Login ${success ? "Success" : "Failed"}
+          </div>
+          <h2 style="color: #f8fafc; font-size: 20px; font-weight: 700; margin: 0 0 12px 0;">Auto-Login ${success ? "Completed" : "Execution Issue"}</h2>
+          <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0;">
+            ${success 
+              ? `The automated login check for <strong>${credentialName}</strong> has completed successfully. No action is required.` 
+              : `The automated login check for <strong>${credentialName}</strong> encountered an error during execution. Details are listed below.`}
+          </p>
+          <div style="background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 28px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #e2e8f0;">
+              <tr>
+                <td style="color: #64748b; padding: 6px 0; font-weight: 500;">Credential Name</td>
+                <td style="font-weight: 600; text-align: right;">${credentialName}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b; padding: 6px 0; font-weight: 500;">Target URL</td>
+                <td style="text-align: right;"><a href="${siteUrl}" style="color: #818cf8; text-decoration: none; font-weight: 600;">${siteUrl.replace(/https?:\/\//, "")}</a></td>
+              </tr>
+              ${!success ? `
+              <tr>
+                <td style="color: #64748b; padding: 6px 0; font-weight: 500; vertical-align: top;">Error Message</td>
+                <td style="font-weight: 600; text-align: right; color: #ef4444; max-width: 250px; word-wrap: break-word;">${error || "Unknown execution timeout"}</td>
+              </tr>
+              ` : ""}
+            </table>
+          </div>
+          <div style="text-align: center; margin-bottom: 24px;">
+            <a href="${actionLink}" style="display: inline-block; background-color: #334155; border: 1px solid #475569; color: #f8fafc; font-weight: 600; font-size: 14px; text-decoration: none; padding: 12px 28px; border-radius: 8px;">
+              View Login History &amp; Logs
+            </a>
+          </div>
+          <p style="color: #64748b; font-size: 11px; line-height: 1.5; margin: 0; text-align: center;">
+            This email is an automated status report. You can pauses alerts anytime inside your scheduler dashboard.
+          </p>
         </div>
       </div>
     `;
