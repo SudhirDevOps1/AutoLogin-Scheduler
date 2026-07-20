@@ -175,7 +175,8 @@ export async function sendEmailAlert({
     const isNode = typeof process !== "undefined" && process.release && process.release.name === "node";
     if (isNode) {
       try {
-        const nodemailer = require("nodemailer");
+        const moduleName = "nodemailer";
+        const nodemailer = require(moduleName);
         const transporter = nodemailer.createTransport({
           host: smtpHost,
           port: smtpPort,
@@ -286,7 +287,8 @@ export async function sendTestEmail({
   } else if (emailProvider === "smtp") {
     const isNode = typeof process !== "undefined" && process.release && process.release.name === "node";
     if (isNode) {
-      const nodemailer = require("nodemailer");
+      const moduleName = "nodemailer";
+      const nodemailer = require(moduleName);
       const transporter = nodemailer.createTransport({
         host: smtpHost,
         port: smtpPort,
