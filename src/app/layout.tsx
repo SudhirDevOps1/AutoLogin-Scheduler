@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){
-            var id='pa_f1f1588a236440788468', url='https://prismanalytics.sudhirdevops1.workers.dev/api/track';
+            var id='pa_003dd08ece6f412f9b07', url='https://prismanalytics.sudhirdevops1.workers.dev/api/track';
             var sid=sessionStorage.getItem('pa_sid')||(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2));
             sessionStorage.setItem('pa_sid',sid);
             function t(e,d){
