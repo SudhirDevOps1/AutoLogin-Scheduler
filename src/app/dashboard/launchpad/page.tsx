@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Rocket,
@@ -14,6 +14,9 @@ import {
   ChevronLeft,
   Loader2,
   Lock,
+  ShieldX,
+  MousePointerClick,
+  ClipboardCheck,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -39,6 +42,11 @@ export default function LaunchpadPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [iframeBlocked, setIframeBlocked] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [autoLaunched, setAutoLaunched] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const blockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -61,11 +69,64 @@ export default function LaunchpadPage() {
   }, [id]);
 
   // Auto-decrypt password if action=login is present on load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (action === "login" && cred && !password && !revealing) {
       revealPassword();
     }
-  }, [action, cred, password, revealing]);
+  }, [action, cred]);
+
+  // Start iframe block detection timer after cred loads
+  useEffect(() => {
+    if (!cred) return;
+    blockTimeoutRef.current = setTimeout(() => {
+      if (!iframeLoaded) {
+        setIframeBlocked(true);
+      }
+    }, 4000);
+    return () => {
+      if (blockTimeoutRef.current) clearTimeout(blockTimeoutRef.current);
+    };
+  }, [cred, iframeLoaded]);
+
+  function handleIframeLoad() {
+    if (blockTimeoutRef.current) clearTimeout(blockTimeoutRef.current);
+    setIframeLoaded(true);
+    setIframeBlocked(false);
+  }
+
+  function handleIframeError() {
+    if (blockTimeoutRef.current) clearTimeout(blockTimeoutRef.current);
+    setIframeBlocked(true);
+  }
+
+  async function autoLaunch() {
+    if (!cred) return;
+    let pass = password;
+    if (!pass) {
+      try {
+        const res = await fetch(`/api/credentials/reveal?id=${id}`);
+        const data = await res.json();
+        if (res.ok && data.password) {
+          pass = data.password;
+          setPassword(data.password);
+          setShowPassword(true);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (pass) {
+      try {
+        await navigator.clipboard.writeText(pass);
+      } catch {
+        // clipboard denied — still open site
+      }
+    }
+    window.open(cred.siteUrl, "_blank", "noopener,noreferrer");
+    setAutoLaunched(true);
+    showToast("Site opened! Password copied — just paste it.", "success");
+  }
 
   async function runQuickLogin() {
     if (cred) {
@@ -76,7 +137,7 @@ export default function LaunchpadPage() {
 
   function showToast(msg: string, type: "success" | "error" = "success") {
     setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
+    setTimeout(() => setToast(null), 3500);
   }
 
   async function copyToClipboard(text: string, label: string) {
@@ -140,6 +201,9 @@ export default function LaunchpadPage() {
     </div>
   );
 
+  let hostname = cred.siteUrl;
+  try { hostname = new URL(cred.siteUrl).hostname; } catch { /* keep as-is */ }
+
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-8rem)] min-h-[500px]">
       {toast && (
@@ -151,7 +215,7 @@ export default function LaunchpadPage() {
         </div>
       )}
 
-      {/* 🛠️ Left Sidebar Panel (30% width on large screens) */}
+      {/* Left Sidebar Panel */}
       <div className="w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-4">
         <Link href="/dashboard/credentials" className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-text transition">
           <ChevronLeft className="w-4 h-4" /> Back to Credentials
@@ -174,7 +238,7 @@ export default function LaunchpadPage() {
                 <span>⚡ One-Click Mode</span>
               </div>
               <p className="text-text-muted leading-relaxed mb-2">
-                Click "Copy Username" to copy your login ID. Password is decrypted below.
+                Click &quot;Copy Username&quot; to copy your login ID. Password is decrypted below.
               </p>
               <button
                 onClick={runQuickLogin}
@@ -263,11 +327,14 @@ export default function LaunchpadPage() {
         </div>
       </div>
 
-      {/* 🖥️ Right Embedded Browser Area */}
+      {/* Right Embedded Browser Area */}
       <div className="flex-1 flex flex-col rounded-2xl border border-border bg-bg-elev overflow-hidden relative">
+        {/* URL Bar */}
         <div className="bg-bg border-b border-border px-4 py-2 flex items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-success text-success shrink-0" />
+            <span className={`w-2 h-2 rounded-full shrink-0 ${
+              iframeBlocked ? "bg-warning" : iframeLoaded ? "bg-success" : "bg-text-dim animate-pulse"
+            }`} />
             <span className="text-text-muted font-medium truncate select-all">{cred.siteUrl}</span>
           </div>
           <a
@@ -280,19 +347,71 @@ export default function LaunchpadPage() {
           </a>
         </div>
 
-        {/* Info notice about X-Frame-Options */}
-        <div className="bg-warning/5 border-b border-warning/10 px-4 py-2 text-[10px] text-warning/90 leading-tight">
-          ℹ️ <strong>Embedded View:</strong> If the target site remains blank or displays a connection error, it is blocking embedding for security. Please click <strong>"Open in new tab"</strong> at the top right to complete login.
-        </div>
+        {/* Iframe blocked fallback */}
+        {iframeBlocked ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center bg-bg-elev">
+            <div className="w-16 h-16 rounded-2xl bg-warning/10 border border-warning/30 flex items-center justify-center">
+              <ShieldX className="w-8 h-8 text-warning" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-text mb-2">Site Blocks Embedding</h2>
+              <p className="text-sm text-text-muted max-w-sm leading-relaxed">
+                <strong className="text-text">{hostname}</strong> uses{" "}
+                <code className="text-warning text-xs bg-warning/10 px-1 rounded">X-Frame-Options: DENY</code>{" "}
+                to prevent embedding. This is common for secure sites like banking, email, and cloud storage.
+              </p>
+            </div>
 
-        <div className="flex-1 bg-white relative">
-          <iframe
-            src={cred.siteUrl}
-            className="absolute inset-0 w-full h-full border-none"
-            sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
-            referrerPolicy="no-referrer"
-          />
-        </div>
+            <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+              {!autoLaunched ? (
+                <button
+                  onClick={autoLaunch}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-accent to-accent-2 text-white font-bold text-sm hover:opacity-90 transition shadow-lg flex items-center justify-center gap-2"
+                >
+                  <MousePointerClick className="w-4 h-4" />
+                  Auto-Launch + Copy Password
+                </button>
+              ) : (
+                <div className="w-full py-3 rounded-xl bg-success/10 border border-success/30 text-success font-semibold text-sm flex items-center justify-center gap-2">
+                  <ClipboardCheck className="w-4 h-4" />
+                  Site opened! Password copied — just paste it.
+                </div>
+              )}
+              <p className="text-[11px] text-text-dim">
+                Opens site in new tab · Copies password · You just paste &amp; login
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => copyToClipboard(cred.username, "Username")}
+                className="px-3 py-1.5 rounded-lg border border-border text-xs text-text-muted hover:text-text hover:border-accent/40 transition flex items-center gap-1"
+              >
+                <Copy className="w-3 h-3" /> Copy Username
+              </button>
+              {password && (
+                <button
+                  onClick={() => copyToClipboard(password, "Password")}
+                  className="px-3 py-1.5 rounded-lg border border-border text-xs text-text-muted hover:text-text hover:border-accent/40 transition flex items-center gap-1"
+                >
+                  <Copy className="w-3 h-3" /> Copy Password
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 bg-white relative">
+            <iframe
+              ref={iframeRef}
+              src={cred.siteUrl}
+              className="absolute inset-0 w-full h-full border-none"
+              sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+              referrerPolicy="no-referrer"
+              onLoad={handleIframeLoad}
+              onError={handleIframeError}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

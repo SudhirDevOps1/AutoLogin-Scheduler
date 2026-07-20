@@ -1,7 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Shield, Terminal, Key, Copy, Check, Mail, Server, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Shield, Terminal, Key, Copy, Check, Mail, Server, Eye, EyeOff, Loader2, ExternalLink, Database, Cloud, HardDrive, GitBranch } from "lucide-react";
+
+// Quick resource links used throughout the settings page
+const LINKS = {
+  resend:          { label: "Resend Dashboard",          url: "https://resend.com/api-keys",                        badge: "Get API Key" },
+  brevo:           { label: "Brevo (Sendinblue) Dashboard", url: "https://app.brevo.com/settings/keys/api",           badge: "Get API Key" },
+  gmailSmtp:       { label: "Gmail App Password",          url: "https://myaccount.google.com/apppasswords",          badge: "Generate" },
+  cloudflare:      { label: "Cloudflare Dashboard",         url: "https://dash.cloudflare.com/",                      badge: "Open" },
+  cfWorkers:       { label: "Cloudflare Workers",           url: "https://dash.cloudflare.com/?to=/:account/workers", badge: "Open" },
+  cfD1:            { label: "Cloudflare D1 Databases",      url: "https://dash.cloudflare.com/?to=/:account/workers/d1", badge: "Open" },
+  cfR2:            { label: "Cloudflare R2 Buckets",        url: "https://dash.cloudflare.com/?to=/:account/r2",      badge: "Open" },
+  cfCron:          { label: "Cloudflare Cron Events",       url: "https://dash.cloudflare.com/?to=/:account/workers", badge: "View Logs" },
+  github:          { label: "GitHub Repository",            url: "https://github.com/SudhirDevOps1/AutoLogin-Scheduler", badge: "Open" },
+  jwtSecret:       { label: "Generate JWT Secret",          url: "https://surakshit-vault-pro.pages.dev/#jwt",          badge: "Generate" },
+  backblaze:       { label: "Backblaze B2 (S3-compat)",     url: "https://www.backblaze.com/sign-up/developer",       badge: "Free Tier" },
+  turso:           { label: "Turso (libSQL)",               url: "https://turso.tech",                                badge: "Free Tier" },
+  wranglerDocs:    { label: "Wrangler Docs",                url: "https://developers.cloudflare.com/workers/wrangler/", badge: "Docs" },
+};
+
+function QuickLink({ k }: { k: keyof typeof LINKS }) {
+  const l = LINKS[k];
+  return (
+    <a
+      href={l.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-accent/30 bg-accent/5 text-accent hover:bg-accent/15 transition font-medium"
+    >
+      {l.badge} <ExternalLink className="w-2.5 h-2.5" />
+    </a>
+  );
+}
 
 export default function SettingsPage() {
   const [user, setUser] = useState<{ id: string; email: string; createdAt: number } | null>(null);
@@ -140,6 +171,44 @@ ALLOW_REGISTRATION = "true"`;
         </section>
       )}
 
+      {/* 🔗 Quick Resource Links */}
+      <section className="rounded-xl border border-border bg-bg-elev p-6">
+        <h2 className="font-semibold mb-4 flex items-center gap-2">
+          <ExternalLink className="w-4 h-4 text-accent" /> Quick Links — Services &amp; Dashboards
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[
+            { icon: <Mail className="w-4 h-4 text-blue-400" />, title: "Resend", desc: "HTTP email API for Cloudflare Workers", link: "resend" as keyof typeof LINKS },
+            { icon: <Mail className="w-4 h-4 text-teal-400" />, title: "Brevo (Sendinblue)", desc: "HTTP email API, free 300/day", link: "brevo" as keyof typeof LINKS },
+            { icon: <Mail className="w-4 h-4 text-red-400" />, title: "Gmail SMTP App Password", desc: "For SMTP mode with Gmail", link: "gmailSmtp" as keyof typeof LINKS },
+            { icon: <Cloud className="w-4 h-4 text-orange-400" />, title: "Cloudflare Dashboard", desc: "Workers, D1, R2 control panel", link: "cloudflare" as keyof typeof LINKS },
+            { icon: <Cloud className="w-4 h-4 text-orange-300" />, title: "Cloudflare Workers", desc: "View / edit your Worker", link: "cfWorkers" as keyof typeof LINKS },
+            { icon: <Database className="w-4 h-4 text-purple-400" />, title: "Cloudflare D1", desc: "Your autologin-db SQLite database", link: "cfD1" as keyof typeof LINKS },
+            { icon: <HardDrive className="w-4 h-4 text-green-400" />, title: "Cloudflare R2 Buckets", desc: "Screenshot storage (optional)", link: "cfR2" as keyof typeof LINKS },
+            { icon: <Database className="w-4 h-4 text-emerald-400" />, title: "Backblaze B2", desc: "S3-compatible bucket (free 10GB)", link: "backblaze" as keyof typeof LINKS },
+            { icon: <Database className="w-4 h-4 text-cyan-400" />, title: "Turso (libSQL)", desc: "Serverless SQLite, 9GB free", link: "turso" as keyof typeof LINKS },
+            { icon: <GitBranch className="w-4 h-4 text-text" />, title: "GitHub Repo", desc: "Source code & issues", link: "github" as keyof typeof LINKS },
+            { icon: <Key className="w-4 h-4 text-yellow-400" />, title: "JWT Secret Generator", desc: "Generate AUTH_SECRET online", link: "jwtSecret" as keyof typeof LINKS },
+            { icon: <Terminal className="w-4 h-4 text-text-muted" />, title: "Wrangler CLI Docs", desc: "Official Cloudflare CLI reference", link: "wranglerDocs" as keyof typeof LINKS },
+          ].map((item) => (
+            <a
+              key={item.title}
+              href={LINKS[item.link].url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-start gap-3 p-3 rounded-lg border border-border hover:border-accent/40 hover:bg-bg-soft transition group"
+            >
+              <div className="mt-0.5 shrink-0">{item.icon}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold group-hover:text-accent transition truncate">{item.title}</div>
+                <div className="text-xs text-text-dim mt-0.5">{item.desc}</div>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-text-dim group-hover:text-accent transition shrink-0 mt-0.5" />
+            </a>
+          ))}
+        </div>
+      </section>
+
       {/* 📧 Email Alerts Configuration */}
       <section className="rounded-xl border border-border bg-bg-elev p-6">
         <h2 className="font-semibold mb-2 flex items-center gap-2">
@@ -184,6 +253,10 @@ ALLOW_REGISTRATION = "true"`;
 
           {emailProvider === "resend" && (
             <div className="space-y-4 border-t border-border/40 pt-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-text-dim">Get your API key from the Resend dashboard</span>
+                <QuickLink k="resend" />
+              </div>
               <div>
                 <label className="text-sm font-medium text-text-muted block mb-1.5">Resend API Key</label>
                 <div className="relative">
@@ -220,6 +293,10 @@ ALLOW_REGISTRATION = "true"`;
 
           {emailProvider === "brevo" && (
             <div className="space-y-4 border-t border-border/40 pt-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-text-dim">Get your API key from Brevo (Sendinblue) dashboard</span>
+                <QuickLink k="brevo" />
+              </div>
               <div>
                 <label className="text-sm font-medium text-text-muted block mb-1.5">Brevo API Key (SIB-API-KEY)</label>
                 <div className="relative">
@@ -256,6 +333,10 @@ ALLOW_REGISTRATION = "true"`;
 
           {emailProvider === "smtp" && (
             <div className="space-y-4 border-t border-border/40 pt-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-text-dim">Using Gmail? Generate an App Password</span>
+                <QuickLink k="gmailSmtp" />
+              </div>
               <div className="p-3 rounded-lg border border-warning/30 bg-warning/5 text-xs text-warning leading-normal mb-2">
                 ⚠️ Note: Cloudflare Workers restrict direct TCP socket outbound streams. Custom SMTP port connections will only run when hosting the app via Node.js server. Use Resend or Brevo HTTP API modes for worker deployments.
               </div>
@@ -340,9 +421,16 @@ ALLOW_REGISTRATION = "true"`;
       </section>
 
       <section className="rounded-xl border border-border bg-bg-elev p-6">
-        <h2 className="font-semibold mb-4 flex items-center gap-2">
+        <h2 className="font-semibold mb-3 flex items-center gap-2">
           <Key className="w-4 h-4 text-accent" /> Cloudflare Deployment Config
         </h2>
+        <div className="flex flex-wrap gap-2 mb-4">
+          <QuickLink k="cfWorkers" />
+          <QuickLink k="cfD1" />
+          <QuickLink k="cfR2" />
+          <QuickLink k="cfCron" />
+          <QuickLink k="wranglerDocs" />
+        </div>
         <p className="text-sm text-text-muted mb-4">
           Copy this <code className="px-1.5 py-0.5 rounded bg-bg-soft text-accent text-xs">wrangler.toml</code> into your Cloudflare Worker project
           to deploy the full AutoLogin Scheduler stack.
@@ -381,9 +469,17 @@ ALLOW_REGISTRATION = "true"`}
       </section>
 
       <section className="rounded-xl border border-border bg-bg-elev p-6">
-        <h2 className="font-semibold mb-4 flex items-center gap-2">
+        <h2 className="font-semibold mb-3 flex items-center gap-2">
           <Terminal className="w-4 h-4 text-accent" /> Required Secrets
         </h2>
+        <div className="flex flex-wrap gap-2 mb-4">
+          <QuickLink k="jwtSecret" />
+          <QuickLink k="resend" />
+          <QuickLink k="brevo" />
+          <QuickLink k="backblaze" />
+          <QuickLink k="turso" />
+          <QuickLink k="github" />
+        </div>
         <p className="text-sm text-text-muted mb-4">
           Set these via <code className="px-1.5 py-0.5 rounded bg-bg-soft text-accent text-xs">wrangler secret put</code>:
         </p>
