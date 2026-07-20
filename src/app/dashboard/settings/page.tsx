@@ -49,6 +49,7 @@ export default function SettingsPage() {
   const [smtpFrom, setSmtpFrom] = useState("");
   const [brevoApiKey, setBrevoApiKey] = useState("");
   const [brevoFrom, setBrevoFrom] = useState("");
+  const [notificationEmail, setNotificationEmail] = useState("");
 
   const [showResendKey, setShowResendKey] = useState(false);
   const [showSmtpPass, setShowSmtpPass] = useState(false);
@@ -82,6 +83,7 @@ export default function SettingsPage() {
           setSmtpFrom(s.smtpFrom);
           setBrevoApiKey(s.brevoApiKey);
           setBrevoFrom(s.brevoFrom);
+          setNotificationEmail(s.notificationEmail || "");
           setEnvInfo(s.env);
         }
       })
@@ -279,6 +281,17 @@ ALLOW_REGISTRATION = "true"`;
         )}
 
         <form onSubmit={handleSaveSettings} className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-text-muted block mb-1.5">Email Notification Address (Optional)</label>
+            <input
+              type="email"
+              value={notificationEmail}
+              onChange={(e) => setNotificationEmail(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-border bg-bg text-sm"
+              placeholder="alerts-inbox@yourdomain.com (Defaults to account email if empty)"
+            />
+          </div>
+
           <div>
             <label className="text-sm font-medium text-text-muted block mb-1.5">Email Provider</label>
             <select

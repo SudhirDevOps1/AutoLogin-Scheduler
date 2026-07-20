@@ -176,6 +176,7 @@ export const userSettings = sqliteTable("user_settings", {
   smtpFrom: text("smtp_from"),
   brevoApiKey: text("brevo_api_key"),
   brevoFrom: text("brevo_from"),
+  notificationEmail: text("notification_email"),
   updatedAt: integer("updated_at", { mode: "number" }).notNull(),
 });
 

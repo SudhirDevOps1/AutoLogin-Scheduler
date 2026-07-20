@@ -31,6 +31,7 @@ export async function GET() {
       smtpFrom: settings?.smtpFrom || "",
       brevoApiKey: settings?.brevoApiKey ? "********" : "",
       brevoFrom: settings?.brevoFrom || "",
+      notificationEmail: settings?.notificationEmail || "",
       // Indicate environment variable status
       env: {
         hasResend: !!config.RESEND_API_KEY,
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
       smtpFrom,
       brevoApiKey,
       brevoFrom,
+      notificationEmail,
     } = body;
 
     // Fetch existing settings
@@ -118,6 +120,7 @@ export async function POST(req: NextRequest) {
           smtpFrom: smtpFrom || null,
           brevoApiKey: finalBrevoKey || null,
           brevoFrom: brevoFrom || null,
+          notificationEmail: notificationEmail || null,
           updatedAt: now,
         })
         .where(eq(userSettings.userId, auth.userId));
@@ -135,6 +138,7 @@ export async function POST(req: NextRequest) {
         smtpFrom: smtpFrom || null,
         brevoApiKey: finalBrevoKey || null,
         brevoFrom: brevoFrom || null,
+        notificationEmail: notificationEmail || null,
         updatedAt: now,
       });
     }

@@ -64,6 +64,7 @@ export async function sendEmailAlert({
   let smtpPort = 587;
   let smtpUser = "";
   let smtpPass = "";
+  let targetEmail = toEmail;
 
   try {
     const rows = await db
@@ -73,20 +74,25 @@ export async function sendEmailAlert({
       .limit(1);
     
     const settings = rows[0];
-    if (settings && settings.emailProvider !== "disabled") {
-      provider = settings.emailProvider;
-      fromEmail = settings.resendFrom || settings.smtpFrom || settings.brevoFrom || fromEmail;
-      
-      if (provider === "resend" && settings.resendApiKey) {
-        apiKey = await decryptCredential(settings.resendApiKey);
-      } else if (provider === "brevo" && settings.brevoApiKey) {
-        apiKey = await decryptCredential(settings.brevoApiKey);
-      } else if (provider === "smtp") {
-        smtpHost = settings.smtpHost || "";
-        smtpPort = settings.smtpPort || 587;
-        smtpUser = settings.smtpUser || "";
-        if (settings.smtpPass) {
-          smtpPass = await decryptCredential(settings.smtpPass);
+    if (settings) {
+      if (settings.notificationEmail) {
+        targetEmail = settings.notificationEmail;
+      }
+      if (settings.emailProvider !== "disabled") {
+        provider = settings.emailProvider;
+        fromEmail = settings.resendFrom || settings.smtpFrom || settings.brevoFrom || fromEmail;
+        
+        if (provider === "resend" && settings.resendApiKey) {
+          apiKey = await decryptCredential(settings.resendApiKey);
+        } else if (provider === "brevo" && settings.brevoApiKey) {
+          apiKey = await decryptCredential(settings.brevoApiKey);
+        } else if (provider === "smtp") {
+          smtpHost = settings.smtpHost || "";
+          smtpPort = settings.smtpPort || 587;
+          smtpUser = settings.smtpUser || "";
+          if (settings.smtpPass) {
+            smtpPass = await decryptCredential(settings.smtpPass);
+          }
         }
       }
     }
@@ -162,7 +168,7 @@ export async function sendEmailAlert({
         },
         body: JSON.stringify({
           from: fromEmail,
-          to: toEmail,
+          to: targetEmail,
           subject,
           html: htmlContent
         })
@@ -181,7 +187,7 @@ export async function sendEmailAlert({
         },
         body: JSON.stringify({
           sender: { email: fromEmail },
-          to: [{ email: toEmail }],
+          to: [{ email: targetEmail }],
           subject,
           htmlContent
         })
@@ -205,20 +211,20 @@ export async function sendEmailAlert({
       });
       await transporter.sendMail({
         from: fromEmail,
-        to: toEmail,
+        to: targetEmail,
         subject,
         html: htmlContent
       });
       nodemailerSuccess = true;
-      console.log(`[email] SMTP alert email sent to ${toEmail} (Node.js)`);
+      console.log(`[email] SMTP alert email sent to ${targetEmail} (Node.js)`);
     } catch (_) {
       // Failed to load or execute nodemailer -> Run native Worker TCP Sockets
     }
 
     if (!nodemailerSuccess) {
       try {
-        await sendSmtpOverWorkerSocket(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail, toEmail, subject, htmlContent);
-        console.log(`[email] SMTP alert email successfully sent to ${toEmail} via Worker TCP Sockets!`);
+        await sendSmtpOverWorkerSocket(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail, targetEmail, subject, htmlContent);
+        console.log(`[email] SMTP alert email successfully sent to ${targetEmail} via Worker TCP Sockets!`);
       } catch (err) {
         console.error("[email] SMTP worker socket delivery failed:", err);
       }

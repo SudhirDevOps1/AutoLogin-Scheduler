@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       smtpFrom,
       brevoApiKey,
       brevoFrom,
+      notificationEmail,
     } = body;
 
     // Fetch existing settings to see if we should fallback to stored passwords if masked
@@ -53,9 +54,11 @@ export async function POST(req: NextRequest) {
       finalBrevoKey = existing?.brevoApiKey ? await decryptCredential(existing.brevoApiKey) : "";
     }
 
-    // Attempt sending test email to user's logged-in email
+    const targetEmail = notificationEmail || auth.email;
+
+    // Attempt sending test email to custom target email
     await sendTestEmail({
-      toEmail: auth.email,
+      toEmail: targetEmail,
       emailProvider,
       resendApiKey: finalResendKey,
       resendFrom,
@@ -68,7 +71,7 @@ export async function POST(req: NextRequest) {
       smtpFrom,
     });
 
-    return NextResponse.json({ success: true, message: `Test email sent successfully to ${auth.email}!` });
+    return NextResponse.json({ success: true, message: `Test email sent successfully to ${targetEmail}!` });
   } catch (err: any) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
