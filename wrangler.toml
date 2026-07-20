@@ -44,4 +44,4 @@ binding = "BROWSER"
 
 [vars]
 ALLOW_REGISTRATION = "true"
-FAKE_DATA = "true"
+FAKE_DATA = "false"
