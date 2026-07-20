@@ -7,6 +7,7 @@ import { NavAuth } from "@/components/nav-auth";
 import { Logo } from "@/components/logo";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://autologin-scheduler.sudhirdevops1.workers.dev"),
   title: "AutoLogin Scheduler — Serverless Auto-Login on Cloudflare",
   description:
     "Schedule auto-login to any website. Encrypted credentials, Cloudflare Cron + Browser Rendering, R2/S3 optional, self-host on your account.",
@@ -20,6 +21,14 @@ export const metadata: Metadata = {
     apple: "/favicon.png",
   },
   openGraph: {
+    title: "AutoLogin Scheduler — Serverless Auto-Login",
+    description: "Schedule auto-login to any website. Encrypted credentials, Cloudflare Cron + Browser Rendering.",
+    images: ["/logo.png"],
+    url: "https://autologin-scheduler.sudhirdevops1.workers.dev",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
     title: "AutoLogin Scheduler — Serverless Auto-Login",
     description: "Schedule auto-login to any website. Encrypted credentials, Cloudflare Cron + Browser Rendering.",
     images: ["/logo.png"],

@@ -17,6 +17,7 @@ import { GET as getCredentials, POST as postCredentials, PUT as putCredentials, 
 import { GET as getRevealCredential } from "../app/api/credentials/reveal/route";
 import { GET as getSchedules, POST as postSchedules, PUT as putSchedules, DELETE as deleteSchedules } from "../app/api/schedules/route";
 import { GET as getLogs } from "../app/api/logs/route";
+import { POST as postLogsManual } from "../app/api/logs/manual/route";
 import { POST as postTrigger, PUT as putTrigger } from "../app/api/trigger/route";
 import { GET as getAdminOverview } from "../app/api/admin/overview/route";
 import { GET as getSettings, POST as postSettings } from "../app/api/settings/route";
@@ -107,6 +108,7 @@ app.delete("/api/schedules", (c) => wrap(deleteSchedules, c));
 
 // ─── Logs ─────────────────────────────────────────────────────────────────
 app.get("/api/logs", (c) => wrap(getLogs, c));
+app.post("/api/logs/manual", (c) => wrap(postLogsManual, c));
 
 // ─── Trigger / Cron ───────────────────────────────────────────────────────
 app.post("/api/trigger", (c) => wrap(postTrigger, c));
