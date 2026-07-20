@@ -132,6 +132,7 @@ ALLOW_REGISTRATION = "true"`;
           smtpFrom,
           brevoApiKey,
           brevoFrom,
+          notificationEmail,
         }),
       });
       if (res.ok) {
