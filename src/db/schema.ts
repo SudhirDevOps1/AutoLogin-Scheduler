@@ -13,8 +13,8 @@ import { config } from "@/lib/config";
 import * as pgSchema from "./schema-pg";
 import * as tursoSchema from "./schema-turso";
 
-const useTurso = config.DB_TYPE === "turso";
-const active = useTurso ? tursoSchema : pgSchema;
+const useSQLite = !config.HAS_PG;
+const active = useSQLite ? tursoSchema : pgSchema;
 
 export const users = active.users as typeof pgSchema.users;
 export const sessions = active.sessions as typeof pgSchema.sessions;
