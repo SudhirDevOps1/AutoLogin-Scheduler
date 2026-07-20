@@ -163,12 +163,52 @@ app.post("/api/settings", (c) => wrap(postSettings, c));
 // ─── Admin Overview ───────────────────────────────────────────────────────
 app.get("/api/admin/overview", (c) => wrap(getAdminOverview, c));
 
+// Security headers to inject on every response (API + static assets)
+const SECURITY_HEADERS: Record<string, string> = {
+  "X-Frame-Options":           "DENY",
+  "X-Content-Type-Options":    "nosniff",
+  "Referrer-Policy":           "strict-origin-when-cross-origin",
+  "Permissions-Policy":        "camera=(), microphone=(), geolocation=(), payment=()",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://prismanalytics.sudhirdevops1.workers.dev",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://prismanalytics.sudhirdevops1.workers.dev https://apnaform.sudhirdevops1.workers.dev",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self' https://apnaform.sudhirdevops1.workers.dev",
+  ].join("; "),
+};
+
+function injectSecurityHeaders(response: Response): Response {
+  const newHeaders = new Headers(response.headers);
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    newHeaders.set(key, value);
+  }
+  newHeaders.delete("X-Powered-By");
+  newHeaders.delete("Server");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders,
+  });
+}
+
 // ─── Scheduled Cron Handler ──────────────────────────────────────────────
 export default {
-  fetch: app.fetch,
-  async scheduled(event, env, ctx) {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    // Run Hono app for all requests
+    const response = await app.fetch(request, env, ctx);
+
+    // Inject security headers on every response (API + static asset fallthrough)
+    return injectSecurityHeaders(response);
+  },
+
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     console.log("[Worker Cron] Triggered scheduled event:", event.scheduledTime);
-    // Directly call the trigger PUT handler by mocking a Request
     initD1(env.DB);
     if (env) {
       for (const [key, value] of Object.entries(env)) {
