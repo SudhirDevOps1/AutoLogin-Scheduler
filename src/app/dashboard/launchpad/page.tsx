@@ -13,6 +13,7 @@ import {
   ExternalLink,
   ChevronLeft,
   Loader2,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -70,7 +71,6 @@ export default function LaunchpadPage() {
     if (cred) {
       await navigator.clipboard.writeText(cred.username);
       showToast("Username copied! Press Ctrl+V to paste.", "success");
-      window.open(cred.siteUrl, "_blank", "noopener,noreferrer");
     }
   }
 
@@ -141,7 +141,7 @@ export default function LaunchpadPage() {
   );
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-8rem)] min-h-[500px]">
       {toast && (
         <div className={`fixed top-20 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg border toast-in ${
           toast.type === "success" ? "bg-success/10 border-success/30 text-success" : "bg-danger/10 border-danger/30 text-danger"
@@ -151,137 +151,147 @@ export default function LaunchpadPage() {
         </div>
       )}
 
-      <Link href="/dashboard/credentials" className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-text mb-6 transition">
-        <ChevronLeft className="w-4 h-4" /> Back
-      </Link>
+      {/* 🛠️ Left Sidebar Panel (30% width on large screens) */}
+      <div className="w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-4">
+        <Link href="/dashboard/credentials" className="inline-flex items-center gap-2 text-sm text-text-muted hover:text-text transition">
+          <ChevronLeft className="w-4 h-4" /> Back to Credentials
+        </Link>
 
-      <div className="rounded-2xl border border-accent/30 bg-gradient-to-br from-accent/10 via-bg-elev to-accent-2/5 p-6 md:p-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-          <Rocket className="w-32 h-32 text-accent" />
-        </div>
-        
-        <div className="relative z-10">
+        <div className="rounded-2xl border border-accent/20 bg-bg-elev p-5 flex flex-col gap-4 flex-grow overflow-y-auto">
+          <div className="flex items-center gap-3 pb-3 border-b border-border/60">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-accent-2 flex items-center justify-center glow-purple flex-shrink-0">
+              <Rocket className="w-5 h-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold truncate leading-tight">{cred.name}</h1>
+              <p className="text-xs text-text-dim truncate mt-0.5">Companion Workspace</p>
+            </div>
+          </div>
+
           {action === "login" && (
-            <div className="mb-6 p-4 rounded-xl bg-accent/20 border border-accent/40 flex items-center justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-semibold text-text">⚡ Quick Login Action</h4>
-                <p className="text-xs text-text-dim mt-0.5">Click Go to copy your username and open the site.</p>
+            <div className="p-3 rounded-xl bg-accent/15 border border-accent/30 text-xs">
+              <div className="font-semibold text-text flex items-center gap-1.5 mb-1">
+                <span>⚡ One-Click Mode</span>
               </div>
+              <p className="text-text-muted leading-relaxed mb-2">
+                Click "Copy Username" to copy your login ID. Password is decrypted below.
+              </p>
               <button
                 onClick={runQuickLogin}
-                className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent/90 transition shadow-md"
+                className="w-full py-1.5 rounded-lg bg-accent text-white font-semibold hover:bg-accent/90 transition text-xs shadow-md"
               >
-                Go 🚀
+                Copy Username 🚀
               </button>
             </div>
           )}
 
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-accent-2 flex items-center justify-center glow-purple">
-              <Rocket className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Launchpad</h1>
-              <p className="text-sm text-text-dim mt-0.5">Manual intervention mode for {cred.name}</p>
+          {/* Username */}
+          <div className="p-3 rounded-lg bg-bg border border-border">
+            <div className="text-[10px] text-text-dim uppercase tracking-wider mb-1 font-semibold">Username</div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-sm font-medium truncate select-all">{cred.username}</div>
+              <button
+                onClick={() => copyToClipboard(cred.username, "Username")}
+                className="p-1.5 rounded hover:bg-bg-soft text-text-muted transition"
+                title="Copy Username"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-bg border border-border">
-              <div className="text-xs text-text-dim uppercase tracking-wider mb-2">Target Website</div>
-              <div className="flex items-center justify-between gap-3">
-                <code className="text-sm text-text bg-bg-soft px-3 py-1.5 rounded-lg border border-border block flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                  {cred.siteUrl}
-                </code>
-                <a
-                  href={cred.siteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent/90 transition flex items-center gap-2 shrink-0"
-                >
-                  Open site <ExternalLink className="w-4 h-4" />
-                </a>
-              </div>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-bg border border-border">
-                <div className="text-xs text-text-dim uppercase tracking-wider mb-2">Username</div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={cred.username}
-                    className="flex-1 w-full bg-transparent text-sm font-medium outline-none truncate"
-                  />
-                  <button
-                    onClick={() => copyToClipboard(cred.username, "Username")}
-                    className="p-2 rounded-md hover:bg-bg-soft text-text-muted transition"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-bg border border-border">
-                <div className="text-xs text-text-dim uppercase tracking-wider mb-2">Password</div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    readOnly
-                    value={password || "••••••••••••"}
-                    className="flex-1 w-full bg-transparent text-sm font-medium outline-none"
-                  />
-                  {password ? (
-                    <>
-                      <button
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="p-2 rounded-md hover:bg-bg-soft text-text-muted transition"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                      <button
-                        onClick={() => copyToClipboard(password, "Password")}
-                        className="p-2 rounded-md hover:bg-bg-soft text-text-muted transition"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    </>
-                  ) : (
+          {/* Password */}
+          <div className="p-3 rounded-lg bg-bg border border-border">
+            <div className="text-[10px] text-text-dim uppercase tracking-wider mb-1 font-semibold">Password</div>
+            <div className="flex items-center justify-between gap-2">
+              <input
+                type={showPassword ? "text" : "password"}
+                readOnly
+                value={password || "••••••••••••"}
+                className="flex-1 min-w-0 bg-transparent text-sm font-mono outline-none select-all"
+              />
+              <div className="flex items-center gap-1">
+                {password ? (
+                  <>
                     <button
-                      onClick={revealPassword}
-                      disabled={revealing}
-                      className="px-3 py-1.5 rounded-md bg-accent/10 text-accent text-xs font-medium hover:bg-accent/20 transition flex items-center gap-1.5"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="p-1 rounded hover:bg-bg-soft text-text-muted transition"
                     >
-                      {revealing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
-                      Reveal
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
-                  )}
-                </div>
+                    <button
+                      onClick={() => copyToClipboard(password, "Password")}
+                      className="p-1 rounded hover:bg-bg-soft text-text-muted transition"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={revealPassword}
+                    disabled={revealing}
+                    className="px-2 py-1 rounded bg-accent/10 text-accent text-[10px] font-semibold hover:bg-accent/20 transition flex items-center gap-1"
+                  >
+                    {revealing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Lock className="w-3 h-3" />}
+                    Decrypt
+                  </button>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-accent/20">
-            <h3 className="text-sm font-medium mb-3">Record Login Attempt</h3>
-            <div className="flex flex-wrap gap-3">
+          {/* Action Logger */}
+          <div className="mt-auto pt-4 border-t border-border/60">
+            <div className="text-[10px] text-text-dim uppercase tracking-wider mb-2 font-semibold">Record Log Status</div>
+            <div className="flex flex-col gap-2">
               <button
                 onClick={() => recordManualLog(true)}
                 disabled={submitting}
-                className="flex-1 sm:flex-none px-6 py-2.5 rounded-lg bg-success/10 text-success border border-success/30 hover:bg-success/20 font-medium text-sm transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-2 rounded-lg bg-success/10 text-success border border-success/30 hover:bg-success/20 font-medium text-xs transition flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                <CheckCircle2 className="w-4 h-4" /> I logged in successfully
+                <CheckCircle2 className="w-3.5 h-3.5" /> Log Success
               </button>
               <button
                 onClick={() => recordManualLog(false)}
                 disabled={submitting}
-                className="flex-1 sm:flex-none px-6 py-2.5 rounded-lg bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20 font-medium text-sm transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-2 rounded-lg bg-danger/10 text-danger border border-danger/30 hover:bg-danger/20 font-medium text-xs transition flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                <XCircle className="w-4 h-4" /> CAPTCHA / Failed to login
+                <XCircle className="w-3.5 h-3.5" /> Log Fail / CAPTCHA
               </button>
             </div>
           </div>
+        </div>
+      </div>
 
+      {/* 🖥️ Right Embedded Browser Area */}
+      <div className="flex-1 flex flex-col rounded-2xl border border-border bg-bg-elev overflow-hidden relative">
+        <div className="bg-bg border-b border-border px-4 py-2 flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-success text-success shrink-0" />
+            <span className="text-text-muted font-medium truncate select-all">{cred.siteUrl}</span>
+          </div>
+          <a
+            href={cred.siteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent hover:underline flex items-center gap-1 font-semibold shrink-0"
+          >
+            Open in new tab <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
+        {/* Info notice about X-Frame-Options */}
+        <div className="bg-warning/5 border-b border-warning/10 px-4 py-2 text-[10px] text-warning/90 leading-tight">
+          ℹ️ <strong>Embedded View:</strong> If the target site remains blank or displays a connection error, it is blocking embedding for security. Please click <strong>"Open in new tab"</strong> at the top right to complete login.
+        </div>
+
+        <div className="flex-1 bg-white relative">
+          <iframe
+            src={cred.siteUrl}
+            className="absolute inset-0 w-full h-full border-none"
+            sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
+            referrerPolicy="no-referrer"
+          />
         </div>
       </div>
     </div>

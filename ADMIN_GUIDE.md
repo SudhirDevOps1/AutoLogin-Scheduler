@@ -141,7 +141,8 @@ The email alert module supports dual configuration:
    - API endpoints (`GET/POST /api/settings`) handle CRUD operations.
    - Sensitive credentials (like API Keys and SMTP Passwords) are encrypted using **AES-256-GCM** before saving to the database.
 2. **Environment Fallbacks:** If the UI configuration is set to `Disabled`, the module falls back to read default global keys from environment variables (`config.RESEND_API_KEY`, `config.SMTP_HOST`, etc.).
-3. **One-Click Quick Login Link:** Sent manual login alerts contain a secure link pointing to `/dashboard/launchpad?id=<credentialId>&action=login`, automating password decryption and launching the launchpad quick actions panel.
+3. **One-Click Quick Login Link:** Sent manual login alerts contain a secure link pointing to `/dashboard/launchpad?id=<credentialId>&action=login`.
+4. **Split-Screen Iframe Workspace:** Opens a companion workspace directly in the app. The left side holds username, decrypted password, and log buttons. The right side embeds the target site in a sandboxed `<iframe>` to allow completing the manual check-in process inside the app. If a site sends anti-framing headers (like `X-Frame-Options`), a quick fallback link is provided to open it in a new tab.
 
 ---
 
