@@ -28,6 +28,7 @@ export default function LaunchpadPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
+  const action = searchParams.get("action");
 
   const [cred, setCred] = useState<Credential | null>(null);
   const [password, setPassword] = useState<string | null>(null);
@@ -57,6 +58,21 @@ export default function LaunchpadPage() {
         setLoading(false);
       });
   }, [id]);
+
+  // Auto-decrypt password if action=login is present on load
+  useEffect(() => {
+    if (action === "login" && cred && !password && !revealing) {
+      revealPassword();
+    }
+  }, [action, cred, password, revealing]);
+
+  async function runQuickLogin() {
+    if (cred) {
+      await navigator.clipboard.writeText(cred.username);
+      showToast("Username copied! Press Ctrl+V to paste.", "success");
+      window.open(cred.siteUrl, "_blank", "noopener,noreferrer");
+    }
+  }
 
   function showToast(msg: string, type: "success" | "error" = "success") {
     setToast({ msg, type });
@@ -145,6 +161,21 @@ export default function LaunchpadPage() {
         </div>
         
         <div className="relative z-10">
+          {action === "login" && (
+            <div className="mb-6 p-4 rounded-xl bg-accent/20 border border-accent/40 flex items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-semibold text-text">⚡ Quick Login Action</h4>
+                <p className="text-xs text-text-dim mt-0.5">Click Go to copy your username and open the site.</p>
+              </div>
+              <button
+                onClick={runQuickLogin}
+                className="px-4 py-2 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent/90 transition shadow-md"
+              >
+                Go 🚀
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-accent-2 flex items-center justify-center glow-purple">
               <Rocket className="w-6 h-6 text-white" />

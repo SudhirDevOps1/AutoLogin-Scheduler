@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { credentials, schedules, loginLogs } from "@/db/schema";
+import { users, credentials, schedules, loginLogs } from "@/db/schema";
 import { eq, and, lte, sql } from "drizzle-orm";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { generateId, decryptCredential } from "@/lib/security";
 import { config } from "@/lib/config";
+import { sendEmailAlert } from "@/lib/email";
 
 // ─── POST /api/trigger ────────────────────────────────────────────────────
 // Manually trigger a login for a credential. In production on Cloudflare,
@@ -128,19 +129,23 @@ export async function POST(req: NextRequest) {
         .where(eq(schedules.id, sched.id));
     }
 
-    // ─── Simulated Email Alert ──────────────────────────────────────────
-    // In production: sends via Resend/Brevo/SMTP if configured
+    // ─── Email Alert ──────────────────────────────────────────────────
     let alertSent = false;
     if (sched) {
       const shouldAlert =
         (!willSucceed && sched.alertOnFailure) ||
         (willSucceed && sched.alertOnSuccess);
       if (shouldAlert) {
-        // await sendEmailAlert(auth.userId, cred, willSucceed, errorMessage);
+        await sendEmailAlert({
+          toEmail: auth.email,
+          credentialName: cred.name,
+          siteUrl: cred.siteUrl,
+          credentialId: cred.id,
+          isManual: sched.executionMode === "manual",
+          success: willSucceed,
+          error: errorMessage
+        }).catch(e => console.error("Email alert error:", e));
         alertSent = true;
-        console.log(
-          `[ALERT] Login ${willSucceed ? "SUCCESS" : "FAILED"} for ${cred.siteUrl}: ${errorMessage || "OK"}`
-        );
       }
     }
 
@@ -195,9 +200,11 @@ export async function PUT(req: NextRequest) {
         takeScreenshot: schedules.takeScreenshot,
         siteUrl: credentials.siteUrl,
         name: credentials.name,
+        userEmail: users.email,
       })
       .from(schedules)
       .innerJoin(credentials, eq(schedules.credentialId, credentials.id))
+      .innerJoin(users, eq(credentials.userId, users.id))
       .where(
         and(eq(schedules.enabled, true), lte(schedules.nextRun, now))
       )
@@ -264,6 +271,18 @@ export async function PUT(req: NextRequest) {
           .set({ nextRun })
           .where(eq(schedules.id, sched.id)),
       ]);
+
+      if (alertQueued) {
+        await sendEmailAlert({
+          toEmail: sched.userEmail,
+          credentialName: sched.name,
+          siteUrl: sched.siteUrl,
+          credentialId: sched.credentialId,
+          isManual: sched.executionMode === "manual",
+          success,
+          error: errorMessage
+        }).catch(e => console.error("Cron email alert error:", e));
+      }
 
       results.push({
         scheduleId: sched.id,
