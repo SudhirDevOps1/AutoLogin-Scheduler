@@ -280,28 +280,31 @@ export async function sendEmailAlert({
       console.error("[email] Brevo fetch failed:", err);
     }
   } else if (provider === "smtp") {
-    const isNode = typeof process !== "undefined" && process.release && process.release.name === "node";
-    if (isNode) {
-      try {
-        const moduleName = "nodemailer";
-        const nodemailer = require(moduleName);
-        const transporter = nodemailer.createTransport({
-          host: smtpHost,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: { user: smtpUser, pass: smtpPass }
-        });
-        await transporter.sendMail({
-          from: fromEmail,
-          to: toEmail,
-          subject,
-          html: htmlContent
-        });
-      } catch (err) {
-        console.error("[email] SMTP nodemailer delivery failed:", err);
-      }
-    } else {
-      // Cloudflare Workers: send directly using custom socket connection
+    // Robust dynamic runtime fallback: try loading nodemailer (Node.js).
+    // If it fails with dynamic require unsupported, fallback directly to Worker TCP sockets.
+    let nodemailerSuccess = false;
+    try {
+      const moduleName = "nodemailer";
+      const nodemailer = require(moduleName);
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: { user: smtpUser, pass: smtpPass }
+      });
+      await transporter.sendMail({
+        from: fromEmail,
+        to: toEmail,
+        subject,
+        html: htmlContent
+      });
+      nodemailerSuccess = true;
+      console.log(`[email] SMTP alert email sent to ${toEmail} (Node.js)`);
+    } catch (_) {
+      // Failed to load or execute nodemailer -> Run native Worker TCP Sockets
+    }
+
+    if (!nodemailerSuccess) {
       try {
         await sendSmtpOverWorkerSocket(smtpHost, smtpPort, smtpUser, smtpPass, fromEmail, toEmail, subject, htmlContent);
         console.log(`[email] SMTP alert email successfully sent to ${toEmail} via Worker TCP Sockets!`);
@@ -397,32 +400,33 @@ export async function sendTestEmail({
     if (!smtpHost || !smtpUser || !smtpPass) {
       throw new Error("SMTP host, user, and password are required.");
     }
-    const isNode = typeof process !== "undefined" && process.release && process.release.name === "node";
-    if (isNode) {
-      try {
-        const moduleName = "nodemailer";
-        const nodemailer = require(moduleName);
-        const transporter = nodemailer.createTransport({
-          host: smtpHost,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: { user: smtpUser, pass: smtpPass }
-        });
-        await transporter.sendMail({
-          from: smtpFrom || "notifications@yourdomain.com",
-          to: toEmail,
-          subject,
-          html: htmlContent
-        });
-      } catch (err: any) {
-        throw new Error(`Local SMTP Error: ${err.message}`);
-      }
-    } else {
-      // Cloudflare Workers direct sockets implementation
+    let nodemailerSuccess = false;
+    let nodemailerError: any = null;
+    try {
+      const moduleName = "nodemailer";
+      const nodemailer = require(moduleName);
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: { user: smtpUser, pass: smtpPass }
+      });
+      await transporter.sendMail({
+        from: smtpFrom || "notifications@yourdomain.com",
+        to: toEmail,
+        subject,
+        html: htmlContent
+      });
+      nodemailerSuccess = true;
+    } catch (err) {
+      nodemailerError = err;
+    }
+
+    if (!nodemailerSuccess) {
       try {
         await sendSmtpOverWorkerSocket(smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom || "notifications@yourdomain.com", toEmail, subject, htmlContent);
       } catch (err: any) {
-        throw new Error(`Worker SMTP Error: ${err.message || err}. (Note: SMTP Port 465 with SSL is recommended on Cloudflare Workers)`);
+        throw new Error(`Worker SMTP Socket Error: ${err.message || err}. (Note: SMTP Port 465 with SSL is recommended on Cloudflare Workers)`);
       }
     }
   } else {
