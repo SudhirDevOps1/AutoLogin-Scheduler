@@ -30,6 +30,30 @@ export async function POST(req: NextRequest) {
       notificationEmail,
     } = body;
 
+    // Strict validation checks
+    if (notificationEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(notificationEmail)) {
+      return NextResponse.json({ error: "Invalid Email Notification Address format" }, { status: 400 });
+    }
+
+    if (smtpPort) {
+      const parsedPort = parseInt(smtpPort, 10);
+      if (isNaN(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
+        return NextResponse.json({ error: "SMTP Port must be a valid number between 1 and 65535" }, { status: 400 });
+      }
+    }
+
+    if (smtpFrom && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(smtpFrom)) {
+      return NextResponse.json({ error: "Invalid SMTP Sender email format" }, { status: 400 });
+    }
+
+    if (resendFrom && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resendFrom)) {
+      return NextResponse.json({ error: "Invalid Resend Sender email format" }, { status: 400 });
+    }
+
+    if (brevoFrom && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(brevoFrom)) {
+      return NextResponse.json({ error: "Invalid Brevo Sender email format" }, { status: 400 });
+    }
+
     // Fetch existing settings to see if we should fallback to stored passwords if masked
     const existingRows = await db
       .select()
