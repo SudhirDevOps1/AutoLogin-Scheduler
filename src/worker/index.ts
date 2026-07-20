@@ -3,6 +3,7 @@ import "./shims";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { initD1 } from "../db/index";
+import { requestStorage } from "../lib/auth";
 
 // Import Next.js route handlers
 import { GET as getHealth } from "../app/api/health/route";
@@ -53,7 +54,27 @@ app.use("*", async (c, next) => {
 // Helper to wrap Next.js handlers
 async function wrap(handler: Function, c: any) {
   try {
-    return await handler(c.req.raw);
+    const responseCookies: string[] = [];
+    const response = await requestStorage.run(
+      { headers: c.req.raw.headers, responseCookies },
+      async () => {
+        return await handler(c.req.raw);
+      }
+    );
+
+    if (responseCookies.length > 0 && response) {
+      const newHeaders = new Headers(response.headers);
+      responseCookies.forEach(cookie => {
+        newHeaders.append("Set-Cookie", cookie);
+      });
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders
+      });
+    }
+
+    return response;
   } catch (err) {
     console.error("Handler error:", err);
     return c.json({ error: "Internal server error" }, 500);

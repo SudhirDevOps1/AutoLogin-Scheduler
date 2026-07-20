@@ -3,7 +3,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { config } from "./config";
 
 // ─── Password Hashing (PBKDF2) ───────────────────────────────────────────
-const PBKDF2_ITERATIONS = 210000;
+const PBKDF2_ITERATIONS = 100000;
 const SALT_LENGTH = 16;
 const KEY_LENGTH = 64;
 const DIGEST = "sha512";

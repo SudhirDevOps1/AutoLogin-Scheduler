@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { db } from "@/db";
 import { users, sessions, auditLogs, rateLimits } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { AsyncLocalStorage } from "node:async_hooks";
 import {
   verifyJWT,
   hashToken,
@@ -26,12 +27,50 @@ export class AuthError extends Error {
   }
 }
 
-// ─── Cookie ───────────────────────────────────────────────────────────────
+// ─── Cookie Storage for Non-Next.js environments ──────────────────────────
+export const requestStorage = new AsyncLocalStorage<{ headers: Headers; responseCookies: string[] }>();
+
+async function getCookieJar() {
+  try {
+    return await cookies();
+  } catch (err) {
+    const store = requestStorage.getStore();
+    if (!store) {
+      return {
+        get(name: string) { return undefined; },
+        set(name: string, value: string, options: any) {}
+      };
+    }
+    return {
+      get(name: string) {
+        const cookieHeader = store.headers.get("cookie") || "";
+        const cookiesMap = Object.fromEntries(
+          cookieHeader.split(";").map(c => {
+            const parts = c.trim().split("=");
+            return [parts[0], parts.slice(1).join("=")];
+          })
+        );
+        const val = cookiesMap[name];
+        return val ? { value: val } : undefined;
+      },
+      set(name: string, value: string, options: any) {
+        let cookieStr = `${name}=${value}`;
+        if (options.maxAge !== undefined) cookieStr += `; Max-Age=${options.maxAge}`;
+        if (options.path) cookieStr += `; Path=${options.path}`;
+        if (options.httpOnly) cookieStr += `; HttpOnly`;
+        if (options.secure) cookieStr += `; Secure`;
+        if (options.sameSite) cookieStr += `; SameSite=${options.sameSite}`;
+        store.responseCookies.push(cookieStr);
+      }
+    };
+  }
+}
+
 const SESSION_COOKIE = "autologin_session";
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
 
 export async function setSessionCookie(token: string) {
-  const jar = await cookies();
+  const jar = await getCookieJar();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -42,7 +81,7 @@ export async function setSessionCookie(token: string) {
 }
 
 export async function clearSessionCookie() {
-  const jar = await cookies();
+  const jar = await getCookieJar();
   jar.set(SESSION_COOKIE, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -55,7 +94,7 @@ export async function clearSessionCookie() {
 // ─── Auth context ─────────────────────────────────────────────────────────
 export async function getAuth(): Promise<AuthContext | null> {
   try {
-    const jar    = await cookies();
+    const jar    = await getCookieJar();
     const token  = jar.get(SESSION_COOKIE)?.value;
     if (!token) return null;
 
