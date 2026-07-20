@@ -95,17 +95,21 @@ export async function sendEmailAlert({
   }
 
   if (provider === "disabled") {
-    if (config.RESEND_API_KEY) {
-      provider = "resend";
-      apiKey = config.RESEND_API_KEY;
-      fromEmail = config.RESEND_FROM || fromEmail;
-    } else if (config.SMTP_HOST) {
+    if (config.SMTP_HOST) {
       provider = "smtp";
       smtpHost = config.SMTP_HOST;
       smtpPort = parseInt(config.SMTP_PORT || "587", 10);
       smtpUser = config.SMTP_USER || "";
       smtpPass = config.SMTP_PASS || "";
       fromEmail = config.SMTP_FROM || fromEmail;
+    } else if (config.RESEND_API_KEY) {
+      provider = "resend";
+      apiKey = config.RESEND_API_KEY;
+      fromEmail = config.RESEND_FROM || fromEmail;
+    } else if (config.BREVO_API_KEY) {
+      provider = "brevo";
+      apiKey = config.BREVO_API_KEY;
+      fromEmail = config.BREVO_FROM || fromEmail;
     } else {
       console.warn("[email] No email provider configured.");
       return;
