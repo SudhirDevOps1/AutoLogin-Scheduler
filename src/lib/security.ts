@@ -36,47 +36,73 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 // ─── AES-GCM Encryption for Credentials ──────────────────────────────────
-const ALGORITHM = "aes-256-gcm";
-const IV_LENGTH = 12;
-const TAG_LENGTH = 16;
+// Uses standard Web Crypto (crypto.subtle) natively supported in Cloudflare Workers and Node.js
+const webCrypto = typeof crypto !== "undefined" && crypto.subtle ? crypto : require("crypto").webcrypto;
 
 export async function encryptCredential(plaintext: string): Promise<string> {
-  const key = getEncryptionKey();
-  const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const rawKey = await webCrypto.subtle.importKey(
+    "raw",
+    await webCrypto.subtle.digest("SHA-256", new TextEncoder().encode(config.ENCRYPTION_SECRET)),
+    { name: "AES-GCM" },
+    false,
+    ["encrypt"]
+  );
 
-  let encrypted = cipher.update(plaintext, "utf8", "base64");
-  encrypted += cipher.final("base64");
-  const tag = cipher.getAuthTag();
+  const iv = webCrypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await webCrypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    rawKey,
+    new TextEncoder().encode(plaintext)
+  );
 
-  // Format: iv:ciphertext:tag (all base64)
-  return `${iv.toString("base64")}:${encrypted}:${tag.toString("base64")}`;
+  const ivB64 = btoa(String.fromCharCode(...iv));
+  const ciphertextB64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+
+  // Format: iv:ciphertext (Web Crypto appends the tag at the end of the ciphertext payload)
+  return `${ivB64}:${ciphertextB64}`;
 }
 
 export async function decryptCredential(encryptedData: string): Promise<string> {
-  const key = getEncryptionKey();
-  const [ivB64, ciphertext, tagB64] = encryptedData.split(":");
+  const rawKey = await webCrypto.subtle.importKey(
+    "raw",
+    await webCrypto.subtle.digest("SHA-256", new TextEncoder().encode(config.ENCRYPTION_SECRET)),
+    { name: "AES-GCM" },
+    false,
+    ["decrypt"]
+  );
 
-  if (!ivB64 || !ciphertext || !tagB64) {
+  const parts = encryptedData.split(":");
+  let ivB64 = "";
+  let ciphertextB64 = "";
+
+  if (parts.length === 3) {
+    // Backward compatibility with Node.js format: iv:ciphertext:tag
+    const [oldIvB64, oldCiphertextB64, oldTagB64] = parts;
+    const ciphertext = Uint8Array.from(atob(oldCiphertextB64), c => c.charCodeAt(0));
+    const tag = Uint8Array.from(atob(oldTagB64), c => c.charCodeAt(0));
+
+    const concatenated = new Uint8Array(ciphertext.length + tag.length);
+    concatenated.set(ciphertext, 0);
+    concatenated.set(tag, ciphertext.length);
+
+    ivB64 = oldIvB64;
+    ciphertextB64 = btoa(String.fromCharCode(...concatenated));
+  } else if (parts.length === 2) {
+    [ivB64, ciphertextB64] = parts;
+  } else {
     throw new Error("Invalid encrypted data format");
   }
 
-  const iv = Buffer.from(ivB64, "base64");
-  const tag = Buffer.from(tagB64, "base64");
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(tag);
+  const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
+  const encrypted = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
 
-  let decrypted = decipher.update(ciphertext, "base64", "utf8");
-  decrypted += decipher.final("utf8");
+  const decrypted = await webCrypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    rawKey,
+    encrypted
+  );
 
-  return decrypted;
-}
-
-function getEncryptionKey(): Buffer {
-  // Uses config.ENCRYPTION_SECRET (separate key from JWT AUTH_SECRET).
-  // Key separation: JWT signing key ≠ AES-GCM encryption key.
-  // Falls back to AUTH_SECRET-derived key if ENCRYPTION_SECRET not set.
-  return crypto.createHash("sha256").update(config.ENCRYPTION_SECRET).digest();
+  return new TextDecoder().decode(decrypted);
 }
 
 // ─── JWT Tokens ───────────────────────────────────────────────────────────
