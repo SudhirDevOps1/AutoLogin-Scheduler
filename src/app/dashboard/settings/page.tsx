@@ -172,6 +172,7 @@ ALLOW_REGISTRATION = "true"`;
           smtpFrom,
           brevoApiKey,
           brevoFrom,
+          notificationEmail,
         }),
       });
       const data = await res.json();
