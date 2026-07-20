@@ -104,9 +104,9 @@ npm run dev
 - ✅ Optional screenshot capture (R2/S3 or DB fallback)
 
 ### 🚀 Launchpad (Manual Intervention Mode)
-- ✅ When `executionMode: "manual"`, cron sends an alert instead of auto-login
-- ✅ `/dashboard/launchpad?id=xxx` — secure page to copy username/password
-- ✅ One-click "Open site" button → site opens in new tab
+- ✅ When `executionMode: "manual"`, cron sends a rich SMTP/Resend email alert containing a secure **One-Click Quick Login Link**
+- ✅ `/dashboard/launchpad?id=xxx&action=login` — auto-decrypts password on load and displays a **Quick Login Action** panel
+- ✅ One-click "Go 🚀" button ➜ copies username to clipboard and opens the website in a new tab instantly
 - ✅ Reveal password with audit logging
 - ✅ Record success/failure after manual login
 - ✅ Works alongside auto-login schedules

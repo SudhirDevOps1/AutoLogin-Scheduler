@@ -134,4 +134,21 @@ For D1 deploy, see `wrangler.toml` and `src/worker/index.ts`.
 
 ---
 
+## 📧 Email Alerts & One-Click Actions (`src/lib/email.ts`)
+
+The email alert module integrates with the **Resend API** to send emails in Cloudflare Workers using standard HTTP POST requests:
+* **Manual Interventions:** Sends a rich email alert when a schedule is due in Launchpad (manual) mode.
+* **One-Click Quick Login Link:** The alert contains a secure link pointing to `/dashboard/launchpad?id=<credentialId>&action=login`.
+* **Launchpad Automation:** Loading this URL automatically reveals/decrypts the credentials and renders a quick action button to copy the username and open the website in a new tab.
+
+---
+
+## ⚡ Shimming & Worker Globals (`src/worker/shims.ts`)
+
+To bypass ES Modules and Next.js compiler constraints in Cloudflare Workers (like `__dirname` ReferenceErrors caused by Server components or third-party dependencies):
+* We use a hoisted import of `shims.ts` at the entry point to bind `globalThis.__dirname` and `globalThis.__filename` before Next.js code runs.
+* A custom `AsyncLocalStorage` is utilized to shim the `cookies()` API jar context dynamically during request wrapping.
+
+---
+
 © 2026 Sudhir Singh. MIT License.
