@@ -21,6 +21,7 @@ import { POST as postLogsManual } from "../app/api/logs/manual/route";
 import { POST as postTrigger, PUT as putTrigger } from "../app/api/trigger/route";
 import { GET as getAdminOverview } from "../app/api/admin/overview/route";
 import { GET as getSettings, POST as postSettings } from "../app/api/settings/route";
+import { POST as postSettingsTestEmail } from "../app/api/settings/test-email/route";
 
 export interface Env {
   DB: D1Database;
@@ -160,6 +161,7 @@ app.put("/api/trigger", (c) => wrap(putTrigger, c));
 // ─── Settings ─────────────────────────────────────────────────────────────
 app.get("/api/settings", (c) => wrap(getSettings, c));
 app.post("/api/settings", (c) => wrap(postSettings, c));
+app.post("/api/settings/test-email", (c) => wrap(postSettingsTestEmail, c));
 // ─── Admin Overview ───────────────────────────────────────────────────────
 app.get("/api/admin/overview", (c) => wrap(getAdminOverview, c));
 

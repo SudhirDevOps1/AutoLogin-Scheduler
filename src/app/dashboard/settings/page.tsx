@@ -57,6 +57,10 @@ export default function SettingsPage() {
   const [envInfo, setEnvInfo] = useState<{ hasResend: boolean; hasSmtp: boolean; resendFrom: string; smtpFrom: string } | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  
+  // Test connection states
+  const [testLoading, setTestLoading] = useState(false);
+  const [testMsg, setTestMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -142,6 +146,46 @@ ALLOW_REGISTRATION = "true"`;
     }
   }
 
+  async function handleTestConnection(e: React.MouseEvent) {
+    e.preventDefault();
+    if (emailProvider === "disabled") {
+      setTestMsg({ text: "Please select an email provider to test.", type: "error" });
+      setTimeout(() => setTestMsg(null), 4000);
+      return;
+    }
+    setTestLoading(true);
+    setTestMsg(null);
+    try {
+      const res = await fetch("/api/settings/test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emailProvider,
+          resendApiKey,
+          resendFrom,
+          smtpHost,
+          smtpPort,
+          smtpUser,
+          smtpPass,
+          smtpFrom,
+          brevoApiKey,
+          brevoFrom,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTestMsg({ text: data.message || "Test email sent successfully!", type: "success" });
+      } else {
+        setTestMsg({ text: data.error || "Test connection failed.", type: "error" });
+      }
+    } catch {
+      setTestMsg({ text: "Network error testing connection.", type: "error" });
+    } finally {
+      setTestLoading(false);
+      setTimeout(() => setTestMsg(null), 5000);
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
@@ -223,6 +267,14 @@ ALLOW_REGISTRATION = "true"`;
             saveMsg.type === "success" ? "bg-success/5 border-success/30 text-success" : "bg-danger/5 border-danger/30 text-danger"
           }`}>
             {saveMsg.text}
+          </div>
+        )}
+
+        {testMsg && (
+          <div className={`mb-4 p-3 rounded-lg border text-sm ${
+            testMsg.type === "success" ? "bg-success/5 border-success/30 text-success" : "bg-danger/5 border-danger/30 text-danger"
+          }`}>
+            {testMsg.text}
           </div>
         )}
 
@@ -409,14 +461,25 @@ ALLOW_REGISTRATION = "true"`;
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={saveLoading}
-            className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-accent to-accent-2 text-white text-sm font-medium hover:opacity-90 transition flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {saveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Server className="w-4 h-4" />}
-            Save Email Settings
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={saveLoading || testLoading}
+              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-accent to-accent-2 text-white text-sm font-medium hover:opacity-90 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {saveLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Server className="w-4 h-4" />}
+              Save Email Settings
+            </button>
+            <button
+              type="button"
+              onClick={handleTestConnection}
+              disabled={saveLoading || testLoading}
+              className="px-5 py-2.5 rounded-lg border border-accent/30 bg-accent/5 text-accent text-sm font-medium hover:bg-accent/15 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {testLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              Test Connection 🧪
+            </button>
+          </div>
         </form>
       </section>
 

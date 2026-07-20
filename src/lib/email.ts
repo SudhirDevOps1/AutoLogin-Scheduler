@@ -172,7 +172,6 @@ export async function sendEmailAlert({
       console.error("[email] Brevo fetch failed:", err);
     }
   } else if (provider === "smtp") {
-    // If in Node.js dev server mode, we can use nodemailer
     const isNode = typeof process !== "undefined" && process.release && process.release.name === "node";
     if (isNode) {
       try {
@@ -197,10 +196,118 @@ export async function sendEmailAlert({
         console.error("[email] SMTP nodemailer delivery failed:", err);
       }
     } else {
-      // Cloudflare Workers: direct TCP port sockets are restricted unless connect API is used.
-      // Print warning and log execution payload.
       console.warn("[email] Custom SMTP TCP sockets are restricted on Cloudflare edge. Log payload:");
       console.log(`[SMTP SIMULATION] To: ${toEmail} | Subject: ${subject}`);
     }
+  }
+}
+
+interface TestEmailParams {
+  toEmail: string;
+  emailProvider: string;
+  resendApiKey?: string;
+  resendFrom?: string;
+  brevoApiKey?: string;
+  brevoFrom?: string;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPass?: string;
+  smtpFrom?: string;
+}
+
+export async function sendTestEmail({
+  toEmail,
+  emailProvider,
+  resendApiKey,
+  resendFrom,
+  brevoApiKey,
+  brevoFrom,
+  smtpHost,
+  smtpPort = 587,
+  smtpUser,
+  smtpPass,
+  smtpFrom,
+}: TestEmailParams) {
+  const subject = "🧪 AutoLogin Scheduler — Test Email Connection";
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #6366f1; border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);">
+      <h2 style="color: #6366f1; margin-top: 0; font-size: 20px;">Connection Test Successful! 🎉</h2>
+      <p style="color: #334155; font-size: 15px; line-height: 1.5;">Your email configuration is working perfectly.</p>
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 20px 0; border: 1px solid #e2e8f0; font-size: 13px; color: #475569;">
+        <strong>Configuration Used:</strong><br/>
+        • Provider: <code style="color: #6366f1;">${emailProvider}</code><br/>
+        • Sender: <code>${resendFrom || brevoFrom || smtpFrom || "default"}</code><br/>
+        • Test Destination: <code>${toEmail}</code><br/>
+        • Timestamp: <code>${new Date().toLocaleString()}</code>
+      </div>
+      <p style="color: #64748b; font-size: 12px; margin-bottom: 0;">You can now safely enable automated alerts for site auto-login successes, failures, and manual intervention prompts.</p>
+    </div>
+  `;
+
+  if (emailProvider === "resend") {
+    if (!resendApiKey) throw new Error("Resend API Key is missing");
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        from: resendFrom || "onboarding@resend.dev",
+        to: toEmail,
+        subject,
+        html: htmlContent
+      })
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Resend API: ${errText}`);
+    }
+  } else if (emailProvider === "brevo") {
+    if (!brevoApiKey) throw new Error("Brevo API Key is missing");
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "api-key": brevoApiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        sender: { email: brevoFrom || "alerts@yourdomain.com" },
+        to: [{ email: toEmail }],
+        subject,
+        htmlContent
+      })
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Brevo API: ${errText}`);
+    }
+  } else if (emailProvider === "smtp") {
+    const isNode = typeof process !== "undefined" && process.release && process.release.name === "node";
+    if (isNode) {
+      const nodemailer = require("nodemailer");
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass
+        }
+      });
+      await transporter.sendMail({
+        from: smtpFrom || "notifications@yourdomain.com",
+        to: toEmail,
+        subject,
+        html: htmlContent
+      });
+    } else {
+      throw new Error(
+        "Custom SMTP TCP port socket outbound streams are blocked on Cloudflare edge. Use Resend or Brevo HTTP API modes instead."
+      );
+    }
+  } else {
+    throw new Error(`Invalid email provider: ${emailProvider}`);
   }
 }
