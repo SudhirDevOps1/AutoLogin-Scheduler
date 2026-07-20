@@ -19,7 +19,6 @@ import {
   recordFailedLogin,
   recordSuccessfulLogin,
 } from "@/lib/auth";
-import { seedDemoWorkspace, isFakeData } from "@/lib/demo-data";
 import { config, isAdminEmail } from "@/lib/config";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -80,10 +79,7 @@ export async function POST(req: NextRequest) {
       const token = await signJWT({ sub: adminUser.id, email: adminUser.email });
       await createSession(adminUser.id, adminUser.email, token);
 
-      // Fire-and-forget: demo seed + audit (never blocks login)
-      if (isFakeData()) {
-        void seedDemoWorkspace(adminUser.id).catch(() => {});
-      }
+      // Fire-and-forget: audit (never blocks login)
       void logAudit({
         userId: adminUser.id,
         action: "user.login",
@@ -147,9 +143,7 @@ export async function POST(req: NextRequest) {
     const token = await signJWT({ sub: user.id, email: user.email });
     await createSession(user.id, user.email, token);
 
-    if (isFakeData()) {
-      void seedDemoWorkspace(user.id).catch(() => {});
-    }
+
     void logAudit({
       userId: user.id,
       action: "user.login",

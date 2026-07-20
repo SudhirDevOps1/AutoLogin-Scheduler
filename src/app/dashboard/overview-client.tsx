@@ -69,44 +69,27 @@ function formatCountdown(ts: number) {
 export function OverviewClient({ userEmail, isAdmin, stats, schedules, recentLogs, fakeData }: Props) {
   return (
     <div className="space-y-8">
-      {/* Production mode indicator (FAKE_DATA=false) or dev/admin banner */}
-      {fakeData ? (
-        <div className="rounded-xl border border-accent/30 bg-gradient-to-r from-accent/10 via-bg-elev to-accent-2/5 p-5">
-          <div className="flex flex-wrap items-center gap-3 justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-accent-2 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-accent/30">
-                {isAdmin ? "A" : userEmail.slice(0, 1).toUpperCase()}
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm">
-                  Welcome, {isAdmin ? "Beta Admin" : "Developer"} ({userEmail})
-                </h3>
-                <p className="text-xs text-text-dim">
-                  {isAdmin ? (
-                    <>Default pass: <code className="text-accent">1Sudhi@gmal.com</code> · Change in .env anytime</>
-                  ) : (
-                    <>Your sample workspace is ready · Test CRUD, schedules, triggers and logs freely</>
-                  )}
-                </p>
-              </div>
+      {/* Production-grade Welcome banner */}
+      <div className="rounded-xl border border-accent/20 bg-bg-elev p-5">
+        <div className="flex flex-wrap items-center gap-3 justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-accent-2 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-accent/30">
+              {userEmail.slice(0, 1).toUpperCase()}
             </div>
-            <div className="flex gap-2">
-              <Link href="/docs" className="px-3 py-1.5 rounded-lg border border-border text-xs hover:border-accent/50 transition">API Docs</Link>
-              <Link href="/deploy" className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-accent to-accent-2 text-white text-xs font-medium hover:opacity-90 transition">Deploy</Link>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-success/30 bg-success/5 p-4">
-          <div className="flex gap-3">
-            <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-sm text-success">Production mode</h3>
-              <p className="text-xs text-text-muted">FAKE_DATA=false · No demo data · AES-GCM encryption active</p>
+              <h3 className="font-semibold text-sm">
+                Welcome, {userEmail}
+              </h3>
+              <p className="text-xs text-text-dim">
+                Secure Workspace · AES-GCM encryption active
+              </p>
             </div>
           </div>
+          <div className="flex gap-2">
+            <Link href="/dashboard/settings" className="px-3 py-1.5 rounded-lg border border-border text-xs hover:border-accent/50 transition">Settings</Link>
+          </div>
         </div>
-      )}
+      </div>
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
         <p className="text-text-muted mt-1">Your auto-login activity at a glance</p>

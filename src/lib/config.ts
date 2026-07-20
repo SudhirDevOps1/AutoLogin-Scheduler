@@ -60,7 +60,7 @@ export const config = {
   ADMIN_PASSWORD: getEnv("ADMIN_PASSWORD", "1Sudhi@gmal.com"),
 
   // Feature flags
-  FAKE_DATA: process.env.FAKE_DATA !== "false", // default true
+  FAKE_DATA: false, // permanently false for production-grade deployment
   ALLOW_REGISTRATION: process.env.ALLOW_REGISTRATION !== "false", // default true
 
   // Email providers (optional)

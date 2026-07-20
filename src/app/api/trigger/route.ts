@@ -296,7 +296,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      mode: config.FAKE_DATA ? "beta-simulation" : "production",
+      mode: "production",
       processed: results.length,
       schedules: results,
       timestamp: now,

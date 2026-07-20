@@ -10,7 +10,6 @@ import {
   detectMaliciousInput,
 } from "@/lib/security";
 import { createSession, checkRateLimit, logAudit } from "@/lib/auth";
-import { seedDemoWorkspace, isFakeData } from "@/lib/demo-data";
 import { config, isAdminEmail } from "@/lib/config";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -98,11 +97,7 @@ export async function POST(req: NextRequest) {
     await createSession(userId, email, token);
 
     // Fire-and-forget
-    if (isFakeData()) {
-      void seedDemoWorkspace(userId).catch((e) =>
-        console.error("[demo seed]", e?.message)
-      );
-    }
+
     void logAudit({
       userId,
       action: "user.signup",

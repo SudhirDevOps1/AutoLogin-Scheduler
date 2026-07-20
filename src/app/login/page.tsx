@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -8,34 +8,17 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Sparkles,
-  ArrowRight,
   LockKeyhole,
 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [fakeData, setFakeData] = useState(true);
 
-  const DEMO_EMAIL = fakeData ? "sudhi@gmal.com" : "";
-  const DEMO_PASS  = fakeData ? "1Sudhi@gmal.com" : "";
-
-  const [email, setEmail] = useState(DEMO_EMAIL);
-  const [password, setPassword] = useState(DEMO_PASS);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/health")
-      .then(r => r.json())
-      .then(() => {
-        const isFake = document.cookie.includes("FAKE_DATA") ||
-          localStorage.getItem("FAKE_DATA") !== "false";
-        setFakeData(isFake);
-      })
-      .catch(() => {});
-  }, []);
 
   async function login(loginEmail: string, loginPassword: string) {
     setError(null);
@@ -74,43 +57,13 @@ export default function LoginPage() {
           </div>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[10px] uppercase tracking-[0.2em] px-2 py-1 rounded-full border border-accent/30 bg-accent/10 text-accent font-semibold">
-              {fakeData ? "Demo ready" : "Production"}
+              Production
             </span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Sign in</h1>
           <p className="text-text-muted mt-2 text-sm text-center">
-            {fakeData ? "Explore every screen with sample data" : "Production AutoLogin Scheduler"}
+            Production AutoLogin Scheduler
           </p>
-        </div>
-
-        {fakeData && (
-          <div className="mb-4 rounded-xl border border-accent/30 bg-gradient-to-br from-accent/10 to-accent-2/5 p-4">
-            <div className="flex gap-3">
-              <Sparkles className="w-5 h-5 text-accent shrink-0 mt-1" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold">FAKE_DATA workspace</div>
-                <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
-                  6 credentials, 6 schedules and 42 login events auto-created on login.
-                </p>
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => login(DEMO_EMAIL, DEMO_PASS)}
-                  className="mt-3 w-full py-2 rounded-lg bg-white text-bg text-sm font-semibold hover:bg-white/90 disabled:opacity-50 transition flex items-center justify-center gap-2"
-                >
-                  {loading ? <div className="spinner" /> : <Sparkles className="w-4 h-4" />}
-                  Enter demo workspace
-                  {!loading && <ArrowRight className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 mb-4 text-[11px] text-text-dim uppercase tracking-widest">
-          <div className="h-px bg-border flex-1" />
-          {fakeData ? "or sign in manually" : "sign in"}
-          <div className="h-px bg-border flex-1" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-border bg-bg-elev p-6">
@@ -162,30 +115,15 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {fakeData && (
-          <div className="mt-4 rounded-lg border border-border bg-bg-elev/60 p-3 text-xs text-text-dim">
-            <div className="flex justify-between gap-3">
-              <span>Demo email</span>
-              <code className="text-accent">{DEMO_EMAIL}</code>
-            </div>
-            <div className="flex justify-between gap-3 mt-1">
-              <span>Demo password</span>
-              <code className="text-accent">{DEMO_PASS}</code>
-            </div>
-          </div>
-        )}
-
         <p className="text-center text-sm text-text-muted mt-6">
           New here?{" "}
           <Link href="/register" className="text-accent hover:underline font-medium">
             Create an account
           </Link>
         </p>
-        {!fakeData && (
-          <p className="text-center text-xs text-text-dim mt-2">
-            <code>FAKE_DATA=false</code> · production mode
-          </p>
-        )}
+        <p className="text-center text-xs text-text-dim mt-4 font-mono">
+          production mode
+        </p>
       </div>
     </div>
   );

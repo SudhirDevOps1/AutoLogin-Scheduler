@@ -10,7 +10,6 @@ import {
 } from "@/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 import { requireAuth, AuthError } from "@/lib/auth";
-import { isFakeData } from "@/lib/demo-data";
 import { config, isAdminEmail } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
@@ -84,7 +83,7 @@ export async function GET() {
     const logs = logStats[0] ?? { total: 0, success: 0, failed: 0, avgDuration: 0 };
 
     return NextResponse.json({
-      mode: isFakeData() ? "beta-demo" : "production",
+      mode: "production",
       admin: { email: auth.email },
       stats: {
         users: userCount[0]?.count || 0,
@@ -113,7 +112,7 @@ export async function GET() {
         },
         browser: {
           configured: false,
-          label: isFakeData() ? "Simulated in beta" : "Cloudflare binding required",
+          label: "Cloudflare binding required",
         },
       },
     });

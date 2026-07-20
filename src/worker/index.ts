@@ -18,7 +18,6 @@ import { GET as getRevealCredential } from "../app/api/credentials/reveal/route"
 import { GET as getSchedules, POST as postSchedules, PUT as putSchedules, DELETE as deleteSchedules } from "../app/api/schedules/route";
 import { GET as getLogs } from "../app/api/logs/route";
 import { POST as postTrigger, PUT as putTrigger } from "../app/api/trigger/route";
-import { GET as getDemo, POST as postDemo } from "../app/api/demo/route";
 import { GET as getAdminOverview } from "../app/api/admin/overview/route";
 
 export interface Env {
@@ -112,9 +111,7 @@ app.get("/api/logs", (c) => wrap(getLogs, c));
 app.post("/api/trigger", (c) => wrap(postTrigger, c));
 app.put("/api/trigger", (c) => wrap(putTrigger, c));
 
-// ─── Demo ─────────────────────────────────────────────────────────────────
-app.get("/api/demo", (c) => wrap(getDemo, c));
-app.post("/api/demo", (c) => wrap(postDemo, c));
+
 
 // ─── Admin Overview ───────────────────────────────────────────────────────
 app.get("/api/admin/overview", (c) => wrap(getAdminOverview, c));

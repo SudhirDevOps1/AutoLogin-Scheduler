@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <DashboardShell
       user={user}
       isAdmin={isAdmin}
-      demoMode={true}
+      demoMode={false}
     >
       {children}
     </DashboardShell>
