@@ -131,6 +131,10 @@ npm run dev
 - ✅ **Inline API key badges** — next to Resend/Brevo/SMTP forms for instant navigation
 - ✅ **JWT Secret via [Surakshit Vault Pro](https://surakshit-vault-pro.pages.dev/#jwt)**
 
+### 📧 Dynamic Email Alert Routing & Socket SMTP *(v1.2.0)*
+- ✅ **Custom Email Notification Address:** Optionally route all scheduler alerts (success/failure/manual prompts) to a distinct target email address (configured in settings) instead of the account profile.
+- ✅ **Workers Sockets SMTP:** SMTP connection on Cloudflare Workers falls back to `worker-mailer` to establish native TCP streams (on port `465` with SSL/TLS) straight to the mail server (like `smtp.gmail.com`).
+
 ### 🛡️ Launchpad Smart Fallback *(v1.2.0)*
 - ✅ **Auto-detects blocked iframes** — 4-second timeout with graceful fallback UI
 - ✅ **Auto-Launch button** — opens site in new tab + auto-copies password to clipboard in one click

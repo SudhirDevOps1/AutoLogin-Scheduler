@@ -18,11 +18,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **PrismAnalytics** tracking integration in landing page and dashboard
 - **FormForge** contact form embedded in landing page
 - `database_id` cleared in `wrangler.toml` for clean one-click deploy compatibility
+- **Email Notification Address (Optional)** — user settings field allowing custom alert targets for scheduled jobs
+- **worker-mailer Integration** — socket-based native SMTP client for Cloudflare Workers (supports port 465 SSL/TLS)
 
 ### Fixed
 - `Bucket` and `Github` lucide-react icon names corrected to `HardDrive` and `GitBranch`
 - Launchpad manual log endpoint returning 404 on edge deployments
 - `metadataBase` warning on every Next.js build
+- Cloudflare Workers SMTP compatibility issues (nodemailer unsupported dynamic require resolved via worker-mailer socket fallback)
 
 ### Upgraded
 - `wrangler` 3.114.17 → 4.112.0

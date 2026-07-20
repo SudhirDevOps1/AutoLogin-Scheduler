@@ -140,13 +140,15 @@ For D1 deploy, see `wrangler.toml` and `src/worker/index.ts`.
 
 ## 📧 Email Alerts & One-Click Actions (`src/lib/email.ts`)
 
-The email alert module supports dual configuration:
+The email alert module supports dual configuration and flexible routing:
 1. **Database-Backed Settings (`user_settings` table):** Scoped per user. Users can dynamically configure **Resend**, **Brevo**, or **SMTP** configurations in the Browser Settings UI.
    - API endpoints (`GET/POST /api/settings`) handle CRUD operations.
    - Sensitive credentials (like API Keys and SMTP Passwords) are encrypted using **AES-256-GCM** before saving to the database.
-2. **Environment Fallbacks:** If the UI configuration is set to `Disabled`, the module falls back to read default global keys from environment variables (`config.RESEND_API_KEY`, `config.SMTP_HOST`, etc.).
-3. **One-Click Quick Login Link:** Sent manual login alerts contain a secure link pointing to `/dashboard/launchpad?id=<credentialId>&action=login`.
-4. **Split-Screen Iframe Workspace:** Opens a companion workspace directly in the app. The left side holds username, decrypted password, and log buttons. The right side embeds the target site in a sandboxed `<iframe>` to allow completing the manual check-in process inside the app. If a site sends anti-framing headers (like `X-Frame-Options`), a quick fallback link is provided to open it in a new tab.
+   - **Target Email Routing:** Supports an optional **Email Notification Address** (`notificationEmail`). If set, all automated schedule alerts (succeed/failed/manual) and test connection notifications are routed to this target inbox instead of the default user account email.
+2. **Workers Socket SMTP (`worker-mailer`):** SMTP mode on Cloudflare Workers utilizes `worker-mailer` to establish native TCP connections (specifically supporting port `465` with SSL/TLS) straight to the mail server, bypassing standard Node.js compilation limits.
+3. **Environment Fallbacks:** If the UI configuration is set to `Disabled`, the module falls back to read default global keys from environment variables using the precedence order: **SMTP Host** -> **Resend API** -> **Brevo API**.
+4. **One-Click Quick Login Link:** Sent manual login alerts contain a secure link pointing to `/dashboard/launchpad?id=<credentialId>&action=login`.
+5. **Split-Screen Iframe Workspace:** Opens a companion workspace directly in the app. The left side holds username, decrypted password, and log buttons. The right side embeds the target site in a sandboxed `<iframe>` to allow completing the manual check-in process inside the app. If a site sends anti-framing headers (like `X-Frame-Options`), a quick fallback link is provided to open it in a new tab.
 
 ---
 
