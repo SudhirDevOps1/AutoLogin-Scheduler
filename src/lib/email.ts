@@ -4,16 +4,6 @@ import { eq } from "drizzle-orm";
 import { config } from "./config";
 import { decryptCredential } from "./security";
 
-// Safe import of Cloudflare TCP Sockets helper only when running on worker
-let connectFn: any = null;
-try {
-  const socketsModule = "cloudflare:sockets";
-  const sockets = require(socketsModule);
-  connectFn = sockets.connect;
-} catch (e) {
-  // Fail silently in development/native Node.js
-}
-
 interface EmailAlertParams {
   userId: string;
   toEmail: string;
@@ -36,6 +26,15 @@ async function sendSmtpOverWorkerSocket(
   subject: string,
   html: string
 ) {
+  let connectFn: any = null;
+  try {
+    const socketsModule = "cloudflare:sockets";
+    const sockets = require(socketsModule);
+    connectFn = sockets.connect;
+  } catch (e: any) {
+    throw new Error(`Cloudflare Sockets module load failed: ${e.message || e}`);
+  }
+
   if (!connectFn) {
     throw new Error("Cloudflare sockets connect API is unavailable in this environment.");
   }
