@@ -239,6 +239,49 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      {/* ─── Contact (FormForge) ────────────────────────────────────── */}
+      <section className="py-20 border-t border-border/40 bg-bg-soft/20 px-6">
+        <div className="mx-auto max-w-xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight mb-2">Get in Touch</h2>
+          <p className="text-text-muted text-sm mb-8">
+            Have questions or feedback? Submit this form powered by <strong>FormForge</strong>.
+          </p>
+          <form
+            method="POST"
+            action="https://apnaform.sudhirdevops1.workers.dev/api/submit/endpoint_mhvmLo4MCXHO_5UImnjdulmV"
+            className="w-full p-6 bg-slate-900 border border-slate-800 rounded-2xl space-y-4 shadow-xl text-left"
+          >
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Email</label>
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="Enter email"
+                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Message</label>
+              <textarea
+                name="message"
+                required
+                placeholder="Type your message here..."
+                rows={4}
+                className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition"
+              />
+            </div>
+            {/* Honeypot Bot Trap */}
+            <input name="website" tabIndex={-1} autoComplete="off" style={{ display: "none" }} />
+            <button
+              type="submit"
+              className="w-full py-3 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all"
+            >
+              Send Message
+            </button>
+          </form>
+        </div>
+      </section>
     </main>
   );
 }
