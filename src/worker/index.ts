@@ -36,8 +36,52 @@ export interface Env {
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Enable CORS
-app.use("*", cors({ origin: "*", credentials: true }));
+// Enable CORS — only allow same origin + Cloudflare workers subdomain
+app.use("*", cors({
+  origin: [
+    "https://autologin-scheduler.sudhirdevops1.workers.dev",
+    "http://localhost:3000",
+    "http://localhost:8787",
+  ],
+  credentials: true,
+  allowHeaders: ["Content-Type", "Authorization", "Cookie"],
+  allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+}));
+
+// ─── Security Headers Middleware ─────────────────────────────────────────────
+// Adds OWASP-recommended headers on every response
+app.use("*", async (c, next) => {
+  await next();
+  // Prevent clickjacking
+  c.res.headers.set("X-Frame-Options", "DENY");
+  // Prevent MIME-type sniffing
+  c.res.headers.set("X-Content-Type-Options", "nosniff");
+  // No referrer leaked to 3rd-party sites
+  c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  // Disable dangerous browser features
+  c.res.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  // HSTS — 1 year, includeSubDomains
+  c.res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  // Content Security Policy
+  c.res.headers.set(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://prismanalytics.sudhirdevops1.workers.dev",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data: https:",
+      "connect-src 'self' https://prismanalytics.sudhirdevops1.workers.dev https://apnaform.sudhirdevops1.workers.dev",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self' https://apnaform.sudhirdevops1.workers.dev",
+    ].join("; ")
+  );
+  // Remove server fingerprinting
+  c.res.headers.delete("X-Powered-By");
+  c.res.headers.delete("Server");
+});
+
 
 // Populate process.env and initialize D1 Database
 app.use("*", async (c, next) => {
