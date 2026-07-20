@@ -68,7 +68,7 @@ export async function getAuth(): Promise<AuthContext | null> {
       .from(sessions)
       .where(and(eq(sessions.tokenHash, tokenHash), eq(sessions.revoked, false)))
       .limit(1)
-      .then((r) => r[0]);
+      .then((rows: any[]) => rows[0]);
 
     if (!session) return null;
     if (session.expiresAt < Date.now()) {

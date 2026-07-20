@@ -13,9 +13,14 @@
     "deploy": "wrangler deploy",
     "deploy:frontend": "npx wrangler pages deploy out/",
     "cf:login": "wrangler login",
-    "cf:secret": "wrangler secret put"
+    "cf:secret": "wrangler secret put",
+    "db:push:turso": "drizzle-kit push --config drizzle.turso.config.ts",
+    "db:push:d1": "wrangler d1 migrations apply DB --remote",
+    "db:studio": "drizzle-kit studio",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.4",
     "dotenv": "17.3.1",
     "drizzle-orm": "0.45.2",
     "jose": "^6.2.3",

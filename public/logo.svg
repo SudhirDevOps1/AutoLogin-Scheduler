@@ -1,20 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="g1" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a0f"/>
+      <stop offset="100%" stop-color="#13131a"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#a855f7"/>
       <stop offset="100%" stop-color="#ec4899"/>
     </linearGradient>
-    <linearGradient id="g2" x1="44" y1="36" x2="84" y2="92" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#f0f0f5"/>
+    <linearGradient id="clockGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f4f4f7"/>
+      <stop offset="100%" stop-color="#e0e0e8"/>
     </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
-  <rect width="128" height="128" rx="24" fill="#0a0a0f"/>
-  <path d="M64 18 L106 38 V64 C106 90 86 110 64 118 C42 110 22 90 22 64 V38 Z" fill="url(#g1)" opacity="0.95"/>
-  <path d="M64 24 L100 42 V64 C100 86 82 104 64 112 C46 104 28 86 28 64 V42 Z" fill="#0d0d14"/>
-  <circle cx="64" cy="64" r="22" fill="url(#g2)" opacity="0.12"/>
-  <circle cx="64" cy="64" r="18" fill="none" stroke="url(#g2)" stroke-width="2" opacity="0.7"/>
-  <line x1="64" y1="64" x2="64" y2="52" stroke="url(#g2)" stroke-width="2.5" stroke-linecap="round" opacity="0.9"/>
-  <line x1="64" y1="64" x2="73" y2="69" stroke="url(#g2)" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-  <circle cx="64" cy="64" r="2.5" fill="url(#g2)" opacity="0.9"/>
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <!-- Subtle grid -->
+  <rect width="512" height="512" rx="112" fill="none" stroke="#26262f" stroke-width="2"/>
+  <!-- Shield -->
+  <path d="M256 96 L160 136 L160 256 Q160 356 256 400 Q352 356 352 256 L352 136 Z" 
+        fill="url(#shieldGrad)" filter="url(#glow)" opacity="0.95"/>
+  <!-- Inner shield darker -->
+  <path d="M256 120 L180 152 L180 256 Q180 340 256 378 Q332 340 332 256 L332 152 Z" 
+        fill="#0a0a0f" opacity="0.3"/>
+  <!-- Clock circle -->
+  <circle cx="256" cy="248" r="64" fill="none" stroke="url(#clockGrad)" stroke-width="8"/>
+  <!-- Clock hands -->
+  <line x1="256" y1="248" x2="256" y2="208" stroke="url(#clockGrad)" stroke-width="6" stroke-linecap="round"/>
+  <line x1="256" y1="248" x2="290" y2="268" stroke="url(#clockGrad)" stroke-width="6" stroke-linecap="round"/>
+  <!-- Center dot -->
+  <circle cx="256" cy="248" r="6" fill="url(#clockGrad)"/>
+  <!-- Clock tick marks -->
+  <line x1="256" y1="196" x2="256" y2="204" stroke="url(#clockGrad)" stroke-width="4" stroke-linecap="round"/>
+  <line x1="308" y1="248" x2="300" y2="248" stroke="url(#clockGrad)" stroke-width="4" stroke-linecap="round"/>
+  <line x1="256" y1="300" x2="256" y2="292" stroke="url(#clockGrad)" stroke-width="4" stroke-linecap="round"/>
+  <line x1="204" y1="248" x2="212" y2="248" stroke="url(#clockGrad)" stroke-width="4" stroke-linecap="round"/>
+  <!-- Status pulse dot -->
+  <circle cx="312" cy="184" r="10" fill="#10b981"/>
+  <circle cx="312" cy="184" r="10" fill="#10b981" opacity="0.4"/>
 </svg>

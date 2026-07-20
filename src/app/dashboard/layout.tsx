@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { config, isAdminEmail } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -21,16 +22,13 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     redirect("/login");
   }
 
-  const isAdmin = Boolean(
-    process.env.ADMIN_EMAIL &&
-      user.email.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase()
-  );
+  const isAdmin = isAdminEmail(user.email);
 
   return (
     <DashboardShell
       user={{ id: user.id, email: user.email }}
       isAdmin={isAdmin}
-      demoMode={process.env.DEMO_MODE !== "false"}
+      demoMode={config.FAKE_DATA}
     >
       {children}
     </DashboardShell>

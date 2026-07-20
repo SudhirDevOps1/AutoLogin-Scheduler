@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { Logo } from "@/components/logo";
 
 interface Props {
   user: { id: string; email: string };
@@ -54,14 +55,12 @@ export function DashboardShell({ user, isAdmin, demoMode, children }: Props) {
       >
         <div className="p-5 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-accent to-accent-2 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
+            <Logo size={32} showText={false} />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold truncate">{user.email}</div>
               <div className="text-xs text-text-dim flex items-center gap-1 mt-0.5">
                 <Cloud className="w-3 h-3" />
-                Your Cloudflare account
+                {isAdmin ? "Admin account" : "Your workspace"}
               </div>
             </div>
           </div>

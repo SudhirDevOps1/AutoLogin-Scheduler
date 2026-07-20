@@ -11,12 +11,12 @@ import {
 import { desc, eq, sql } from "drizzle-orm";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { isFakeData } from "@/lib/demo-data";
+import { config, isAdminEmail } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
 function isAdmin(email: string) {
-  const adminEmail = process.env.ADMIN_EMAIL;
-  return Boolean(adminEmail && email.toLowerCase() === adminEmail.toLowerCase());
+  return isAdminEmail(email);
 }
 
 export async function GET() {
@@ -101,15 +101,22 @@ export async function GET() {
       recentUsers,
       recentAudits,
       services: {
-        database: { configured: Boolean(process.env.DATABASE_URL), label: "PostgreSQL + Drizzle" },
-        auth: { configured: Boolean(process.env.AUTH_SECRET || process.env.JWT_SECRET), label: "JWT + PBKDF2" },
+        database: {
+          configured: config.HAS_PG || config.HAS_TURSO,
+          label: config.HAS_TURSO
+            ? "Turso / libSQL"
+            : config.HAS_PG
+            ? "PostgreSQL + Drizzle"
+            : "Cloudflare D1",
+        },
+        auth: { configured: true, label: "JWT + PBKDF2" },
         email: {
-          configured: Boolean(process.env.RESEND_API_KEY || process.env.SMTP_HOST),
-          label: process.env.RESEND_API_KEY ? "Resend" : process.env.SMTP_HOST ? "SMTP" : "Not configured",
+          configured: config.HAS_EMAIL,
+          label: config.RESEND_API_KEY ? "Resend" : config.SMTP_HOST ? "SMTP" : config.BREVO_API_KEY ? "Brevo" : "Not configured",
         },
         storage: {
-          configured: Boolean(process.env.S3_ENDPOINT && process.env.S3_BUCKET_NAME),
-          label: process.env.S3_ENDPOINT ? "S3-compatible" : "D1/DB only",
+          configured: config.HAS_STORAGE,
+          label: config.HAS_STORAGE ? "S3-compatible" : "DB only",
         },
         browser: {
           configured: false,

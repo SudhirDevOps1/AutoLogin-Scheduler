@@ -20,6 +20,7 @@ import {
   recordSuccessfulLogin,
 } from "@/lib/auth";
 import { seedDemoWorkspace, isFakeData } from "@/lib/demo-data";
+import { config, isAdminEmail } from "@/lib/config";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     "127.0.0.1";
 
   try {
-    // ── 1. Parse body ──────────────────────────────────────────────────────
+    // ── 1. Parse & validate ────────────────────────────────────────────────
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
@@ -42,31 +43,26 @@ export async function POST(req: NextRequest) {
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
-
     if (!EMAIL_RE.test(email)) {
       return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
     }
-
     if (detectMaliciousInput(email)) {
       return NextResponse.json({ error: "Invalid input" }, { status: 400 });
     }
 
-    // ── 2. Admin login from env (bypasses rate-limit & DB password check) ──
-    const adminEmail = (process.env.ADMIN_EMAIL ?? "").toLowerCase().trim();
-    const adminPass  = (process.env.ADMIN_PASSWORD ?? "").trim();
-
-    if (adminEmail && adminPass && email === adminEmail && password === adminPass) {
-      // Ensure admin user exists in DB
-      const adminRows = await db.select().from(users).where(eq(users.email, adminEmail)).limit(1);
+    // ── 2. Admin login from config (bypasses DB + rate-limit) ──────────────
+    if (isAdminEmail(email) && password === config.ADMIN_PASSWORD) {
+      // Ensure admin user row exists
+      let adminRows = await db.select().from(users).where(eq(users.email, config.ADMIN_EMAIL.toLowerCase())).limit(1);
       let adminUser = adminRows[0];
 
       if (!adminUser) {
-        const { hash, salt } = await hashPassword(adminPass);
+        const { hash, salt } = await hashPassword(config.ADMIN_PASSWORD);
         const [inserted] = await db
           .insert(users)
           .values({
             id: generateId(),
-            email: adminEmail,
+            email: config.ADMIN_EMAIL.toLowerCase(),
             passwordHash: hash,
             passwordSalt: salt,
             emailVerified: true,
@@ -84,11 +80,9 @@ export async function POST(req: NextRequest) {
       const token = await signJWT({ sub: adminUser.id, email: adminUser.email });
       await createSession(adminUser.id, adminUser.email, token);
 
-      // Fire-and-forget demo seed & audit (never block login)
+      // Fire-and-forget: demo seed + audit (never blocks login)
       if (isFakeData()) {
-        void seedDemoWorkspace(adminUser.id).catch((e) =>
-          console.error("[demo seed]", e?.message)
-        );
+        void seedDemoWorkspace(adminUser.id).catch(() => {});
       }
       void logAudit({
         userId: adminUser.id,
@@ -106,17 +100,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ── 3. Rate limiting (IP + email) ──────────────────────────────────────
+    // ── 3. Rate limiting ───────────────────────────────────────────────────
     const ipRl = await checkRateLimit({
       key: `login:ip:${hashIP(ip)}`,
       max: 20,
       windowMs: 15 * 60 * 1000,
     });
     if (!ipRl.allowed) {
-      return NextResponse.json(
-        { error: "Too many login attempts from this IP. Try again later." },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: "Too many login attempts. Try again later." }, { status: 429 });
     }
 
     const emailRl = await checkRateLimit({
@@ -125,20 +116,14 @@ export async function POST(req: NextRequest) {
       windowMs: 15 * 60 * 1000,
     });
     if (!emailRl.allowed) {
-      return NextResponse.json(
-        { error: "Too many login attempts. Try again later." },
-        { status: 429 }
-      );
+      return NextResponse.json({ error: "Too many login attempts for this email." }, { status: 429 });
     }
 
-    // ── 4. Account lockout check ───────────────────────────────────────────
+    // ── 4. Account lockout ─────────────────────────────────────────────────
     const lockout = await checkAccountLockout(email);
     if (lockout.locked) {
       const mins = Math.ceil((lockout.lockedUntil! - Date.now()) / 60000);
-      return NextResponse.json(
-        { error: `Account locked. Try again in ${mins} minutes.` },
-        { status: 423 }
-      );
+      return NextResponse.json({ error: `Account locked. Try again in ${mins} minutes.` }, { status: 423 });
     }
 
     // ── 5. Load user ───────────────────────────────────────────────────────
@@ -146,8 +131,7 @@ export async function POST(req: NextRequest) {
     const user = userRows[0];
 
     if (!user) {
-      // Timing-safe: still hash to prevent timing attack
-      await hashPassword(password).catch(() => {});
+      await hashPassword(password).catch(() => {}); // timing-safe
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
@@ -158,15 +142,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // ── 7. Clear lockout + issue session ───────────────────────────────────
+    // ── 7. Success ─────────────────────────────────────────────────────────
     await recordSuccessfulLogin(user.id);
     const token = await signJWT({ sub: user.id, email: user.email });
     await createSession(user.id, user.email, token);
 
     if (isFakeData()) {
-      void seedDemoWorkspace(user.id).catch((e) =>
-        console.error("[demo seed]", e?.message)
-      );
+      void seedDemoWorkspace(user.id).catch(() => {});
     }
     void logAudit({
       userId: user.id,
@@ -180,7 +162,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       user: { id: user.id, email: user.email },
-      role: "user",
+      role: isAdminEmail(user.email) ? "admin" : "user",
     });
   } catch (err) {
     console.error("[login route error]", err);

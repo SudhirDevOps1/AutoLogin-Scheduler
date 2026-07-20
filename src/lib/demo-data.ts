@@ -3,8 +3,10 @@ import { credentials, schedules, loginLogs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { encryptCredential, generateId } from "@/lib/security";
 
+import { config } from "@/lib/config";
+
 /** FAKE_DATA=false → pure production. No fake seed, no demo endpoints. */
-export const isFakeData = () => process.env.FAKE_DATA !== "false";
+export const isFakeData = () => config.FAKE_DATA;
 
 /** Legacy alias — same check. */
 export const isDemoMode = isFakeData;

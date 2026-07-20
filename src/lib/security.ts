@@ -1,5 +1,6 @@
 import * as crypto from "crypto";
 import { SignJWT, jwtVerify } from "jose";
+import { config } from "./config";
 
 // ─── Password Hashing (PBKDF2) ───────────────────────────────────────────
 const PBKDF2_ITERATIONS = 210000;
@@ -72,12 +73,8 @@ export async function decryptCredential(encryptedData: string): Promise<string> 
 }
 
 function getEncryptionKey(): Buffer {
-  const secret = process.env.AUTH_SECRET || process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error("AUTH_SECRET or JWT_SECRET environment variable is required");
-  }
-  // Derive a 32-byte key from the secret
-  return crypto.createHash("sha256").update(secret).digest();
+  // Uses config.AUTH_SECRET which has a dev fallback — never throws
+  return crypto.createHash("sha256").update(config.AUTH_SECRET).digest();
 }
 
 // ─── JWT Tokens ───────────────────────────────────────────────────────────
@@ -92,11 +89,7 @@ export interface JWTPayload {
 const JWT_EXPIRES_IN = "7d";
 
 export async function signJWT(payload: Omit<JWTPayload, "iat" | "exp">): Promise<string> {
-  const secret = process.env.JWT_SECRET || process.env.AUTH_SECRET;
-  if (!secret) {
-    throw new Error("JWT_SECRET or AUTH_SECRET environment variable is required");
-  }
-
+  const secret = config.AUTH_SECRET;
   const key = new TextEncoder().encode(secret);
   const jti = crypto.randomUUID();
 
@@ -111,9 +104,7 @@ export async function signJWT(payload: Omit<JWTPayload, "iat" | "exp">): Promise
 
 export async function verifyJWT(token: string): Promise<JWTPayload | null> {
   try {
-    const secret = process.env.JWT_SECRET || process.env.AUTH_SECRET;
-    if (!secret) return null;
-
+    const secret = config.AUTH_SECRET;
     const key = new TextEncoder().encode(secret);
     const { payload } = await jwtVerify(token, key);
 

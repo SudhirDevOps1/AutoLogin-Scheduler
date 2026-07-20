@@ -44,23 +44,39 @@ export default function SettingsPage() {
   }
 
   async function copyConfig() {
-    const config = `# wrangler.toml
+    const config = `# wrangler.toml — AutoLogin Scheduler
 name = "autologin-scheduler"
 main = "src/worker/index.ts"
 compatibility_date = "2026-07-01"
 
+# ─── D1 (default DB for Cloudflare)
 [[d1_databases]]
 binding = "DB"
 database_name = "autologin-db"
 
+# ─── R2 bucket (optional screenshots)
+# [[r2_buckets]]
+# binding = "FILES_BUCKET"
+# bucket_name = "autologin-screenshots"
+
+# ─── Cron: check due schedules every 6h
 [triggers]
 crons = ["0 */6 * * *"]
 
+# ─── Browser Rendering (Puppeteer)
 [browser]
 binding = "BROWSER"
 
 [vars]
-ALLOW_REGISTRATION = "true"`;
+ALLOW_REGISTRATION = "true"
+FAKE_DATA = "true"
+# Set FAKE_DATA = "false" for production
+
+# Secrets (wrangler secret put KEY):
+# AUTH_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
+# TURSO_DATABASE_URL, TURSO_AUTH_TOKEN  ← if using Turso instead of D1
+# RESEND_API_KEY, BREVO_API_KEY or SMTP_*
+# S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY`;
     await navigator.clipboard.writeText(config);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -140,7 +156,7 @@ ALLOW_REGISTRATION = "true"`;
               <RefreshCw className={`w-4 h-4 ${demoLoading ? "animate-spin" : ""}`} /> Reset sample workspace
             </button>
           </div>
-          <p className="text-xs text-text-dim mt-3">Reset affects only your current beta workspace. Set <code className="text-warning">DEMO_MODE=false</code> before production.</p>
+          <p className="text-xs text-text-dim mt-3">Reset affects only your current workspace. Set <code className="text-warning">FAKE_DATA=false</code> in .env before production.</p>
         </section>
       )}
 
@@ -154,22 +170,34 @@ ALLOW_REGISTRATION = "true"`;
         </p>
         <div className="relative">
           <pre className="p-4 rounded-lg bg-bg border border-border text-xs text-text-muted overflow-x-auto">
-{`name = "autologin-scheduler"
+{`# wrangler.toml — AutoLogin Scheduler
+name = "autologin-scheduler"
 main = "src/worker/index.ts"
 compatibility_date = "2026-07-01"
 
+# D1 (default) or Turso (via TURSO_DATABASE_URL secret)
 [[d1_databases]]
 binding = "DB"
 database_name = "autologin-db"
 
+# R2 bucket — optional screenshots
+# [[r2_buckets]]
+# binding = "FILES_BUCKET"
+# bucket_name = "autologin-screenshots"
+
+# Cron Trigger — check due schedules every 6h
 [triggers]
 crons = ["0 */6 * * *"]
 
+# Browser Rendering (Puppeteer auto-login)
 [browser]
 binding = "BROWSER"
 
 [vars]
-ALLOW_REGISTRATION = "true"`}
+ALLOW_REGISTRATION = "true"
+FAKE_DATA = "true"
+# Secrets: AUTH_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
+# Turso:   TURSO_DATABASE_URL, TURSO_AUTH_TOKEN`}
           </pre>
           <button
             onClick={copyConfig}
@@ -194,13 +222,20 @@ ALLOW_REGISTRATION = "true"`}
         </p>
         <div className="space-y-2">
           {[
-            { name: "AUTH_SECRET", desc: "JWT + HMAC signing key (openssl rand -hex 32)", required: true },
-            { name: "RESEND_API_KEY", desc: "Email alerts via Resend (optional)", required: false },
-            { name: "RESEND_FROM", desc: "Sender email for Resend (optional)", required: false },
-            { name: "S3_ENDPOINT", desc: "R2/S3 endpoint for screenshots (optional)", required: false },
-            { name: "S3_ACCESS_KEY_ID", desc: "S3 access key (optional)", required: false },
-            { name: "S3_SECRET_ACCESS_KEY", desc: "S3 secret (optional)", required: false },
-            { name: "S3_BUCKET_NAME", desc: "Screenshot bucket (optional)", required: false },
+            { name: "AUTH_SECRET",          desc: "JWT + encryption key (openssl rand -hex 32)", required: true },
+            { name: "ADMIN_EMAIL",          desc: "Admin bypass email (default: sudhi@gmal.com)", required: false },
+            { name: "ADMIN_PASSWORD",       desc: "Admin bypass password", required: false },
+            { name: "FAKE_DATA",            desc: "true = demo mode, false = production", required: false },
+            { name: "DATABASE_URL",         desc: "postgresql://... OR libsql://... (empty = D1)", required: false },
+            { name: "TURSO_DATABASE_URL",   desc: "Turso: libsql://your-db.turso.io", required: false },
+            { name: "TURSO_AUTH_TOKEN",     desc: "Turso auth token", required: false },
+            { name: "RESEND_API_KEY",       desc: "Email alerts via Resend (100/day free)", required: false },
+            { name: "BREVO_API_KEY",        desc: "Email alerts via Brevo (300/day free)", required: false },
+            { name: "SMTP_HOST",            desc: "SMTP server host (smtp.gmail.com etc.)", required: false },
+            { name: "S3_ENDPOINT",          desc: "R2 / Backblaze / Wasabi endpoint", required: false },
+            { name: "S3_ACCESS_KEY_ID",     desc: "S3 access key", required: false },
+            { name: "S3_SECRET_ACCESS_KEY", desc: "S3 secret key", required: false },
+            { name: "S3_BUCKET_NAME",       desc: "Screenshot bucket name", required: false },
           ].map((s) => (
             <div key={s.name} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-bg-soft transition">
               <code className="text-xs px-2 py-0.5 rounded bg-accent/10 text-accent font-mono shrink-0">

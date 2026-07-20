@@ -4,6 +4,7 @@ import { eq, and, sql, desc } from "drizzle-orm";
 import { getAuth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { OverviewClient } from "./overview-client";
+import { config, isAdminEmail } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -72,19 +73,16 @@ export default async function DashboardOverview() {
       )
     );
 
-  const fakeData = process.env.FAKE_DATA !== "false";
+  const fakeData = config.FAKE_DATA;
   return (
     <OverviewClient
       userEmail={auth.email}
-      isAdmin={Boolean(
-        process.env.ADMIN_EMAIL &&
-          auth.email.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase()
-      )}
+      isAdmin={isAdminEmail(auth.email)}
       fakeData={fakeData}
       stats={{
         totalCredentials: userCredentials.length,
         totalSchedules: userSchedules.length,
-        activeSchedules: userSchedules.filter((s) => s.enabled).length,
+        activeSchedules: userSchedules.filter((s: any) => s.enabled).length,
         totalLogins: totalStats?.total || 0,
         successRate:
           totalStats?.total && totalStats.total > 0

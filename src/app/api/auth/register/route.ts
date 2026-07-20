@@ -11,6 +11,7 @@ import {
 } from "@/lib/security";
 import { createSession, checkRateLimit, logAudit } from "@/lib/auth";
 import { seedDemoWorkspace, isFakeData } from "@/lib/demo-data";
+import { config, isAdminEmail } from "@/lib/config";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 2. Registration open? ──────────────────────────────────────────────
-    if (process.env.ALLOW_REGISTRATION === "false") {
+    if (!config.ALLOW_REGISTRATION) {
       const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(users);
       if (count > 0) {
         return NextResponse.json({ error: "Registration is currently closed" }, { status: 403 });
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
     }).catch(() => {});
 
     return NextResponse.json(
-      { success: true, user: { id: userId, email } },
+      { success: true, user: { id: userId, email }, role: isAdminEmail(email) ? "admin" : "user" },
       { status: 201 }
     );
   } catch (err) {
