@@ -1,101 +1,92 @@
-import { db } from "@/db";
-import { credentials, schedules, loginLogs } from "@/db/schema";
-import { eq, and, sql, desc } from "drizzle-orm";
-import { getAuth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
 import { OverviewClient } from "./overview-client";
-import { config, isAdminEmail } from "@/lib/config";
 
-export const dynamic = "force-dynamic";
+interface Sched {
+  id: string;
+  credentialId: string;
+  cronExpr: string;
+  nextRun: number;
+  enabled: boolean;
+  credentialName: string;
+  siteUrl: string;
+}
 
-export default async function DashboardOverview() {
-  const auth = await getAuth();
-  if (!auth) redirect("/login");
+interface Log {
+  id: string;
+  runTime: number;
+  durationMs: number;
+  success: boolean;
+  errorMessage: string | null;
+  credentialName: string;
+  siteUrl: string;
+}
 
-  // Fetch user's data
-  const userCredentials = await db
-    .select()
-    .from(credentials)
-    .where(eq(credentials.userId, auth.userId));
+export default function DashboardOverview() {
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<{
+    stats: any;
+    schedules: Sched[];
+    recentLogs: Log[];
+  } | null>(null);
 
-  const userSchedules = await db
-    .select({
-      id: schedules.id,
-      credentialId: schedules.credentialId,
-      cronExpr: schedules.cronExpr,
-      nextRun: schedules.nextRun,
-      enabled: schedules.enabled,
-      credentialName: credentials.name,
-      siteUrl: credentials.siteUrl,
-    })
-    .from(schedules)
-    .innerJoin(credentials, eq(schedules.credentialId, credentials.id))
-    .where(eq(credentials.userId, auth.userId))
-    .orderBy(schedules.nextRun);
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        const [meRes, schedsRes] = await Promise.all([
+          fetch("/api/auth/me"),
+          fetch("/api/schedules"),
+        ]);
 
-  const recentLogs = await db
-    .select({
-      id: loginLogs.id,
-      runTime: loginLogs.runTime,
-      durationMs: loginLogs.durationMs,
-      success: loginLogs.success,
-      errorMessage: loginLogs.errorMessage,
-      credentialName: credentials.name,
-      siteUrl: credentials.siteUrl,
-    })
-    .from(loginLogs)
-    .innerJoin(credentials, eq(loginLogs.credentialId, credentials.id))
-    .where(eq(credentials.userId, auth.userId))
-    .orderBy(desc(loginLogs.runTime))
-    .limit(10);
+        if (meRes.ok && schedsRes.ok) {
+          const meData = await meRes.json();
+          const schedsData = await schedsRes.json();
 
-  // Stats
-  const [totalStats] = await db
-    .select({
-      total: sql<number>`CAST(count(*) AS INTEGER)`,
-      success: sql<number>`CAST(sum(CASE WHEN ${loginLogs.success} THEN 1 ELSE 0 END) AS INTEGER)`,
-    })
-    .from(loginLogs)
-    .innerJoin(credentials, eq(loginLogs.credentialId, credentials.id))
-    .where(eq(credentials.userId, auth.userId));
+          // We enrich the recent logs and stats
+          const stats = {
+            totalCredentials: meData.stats.totalCredentials,
+            totalSchedules: meData.stats.totalSchedules,
+            activeSchedules: meData.stats.activeSchedules,
+            totalLogins: meData.stats.logins24h || 0, // Fallback/use 24h as proxy or simple display
+            successRate: meData.stats.successRate24h,
+            logins24h: meData.stats.logins24h,
+            successRate24h: meData.stats.successRate24h,
+          };
 
-  const [stats24h] = await db
-    .select({
-      total: sql<number>`CAST(count(*) AS INTEGER)`,
-      success: sql<number>`CAST(sum(CASE WHEN ${loginLogs.success} THEN 1 ELSE 0 END) AS INTEGER)`,
-    })
-    .from(loginLogs)
-    .innerJoin(credentials, eq(loginLogs.credentialId, credentials.id))
-    .where(
-      and(
-        eq(credentials.userId, auth.userId),
-        sql`${loginLogs.runTime} > ${Date.now() - 24 * 60 * 60 * 1000}`
-      )
+          setData({
+            stats,
+            schedules: schedsData.schedules || [],
+            recentLogs: meData.recentLogs || [],
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load dashboard data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
     );
+  }
 
-  const fakeData = config.FAKE_DATA;
+  if (!data) return <div>Failed to load dashboard.</div>;
+
   return (
     <OverviewClient
-      userEmail={auth.email}
-      isAdmin={isAdminEmail(auth.email)}
-      fakeData={fakeData}
-      stats={{
-        totalCredentials: userCredentials.length,
-        totalSchedules: userSchedules.length,
-        activeSchedules: userSchedules.filter((s) => s.enabled).length,
-        totalLogins: totalStats?.total || 0,
-        successRate:
-          totalStats?.total && totalStats.total > 0
-            ? Math.round((totalStats.success / totalStats.total) * 100)
-            : 100,
-        logins24h: stats24h?.total || 0,
-        successRate24h:
-          stats24h?.total && stats24h.total > 0
-            ? Math.round((stats24h.success / stats24h.total) * 100)
-            : 100,
-      }}
-      schedules={userSchedules}
-      recentLogs={recentLogs}
+      userEmail=""
+      isAdmin={false}
+      fakeData={true}
+      stats={data.stats}
+      schedules={data.schedules}
+      recentLogs={data.recentLogs}
     />
   );
 }

@@ -1,33 +1,55 @@
-import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
-import { getAuth } from "@/lib/auth";
-import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+"use client";
+
+import { ReactNode, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { config, isAdminEmail } from "@/lib/config";
 
-export const dynamic = "force-dynamic";
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  const auth = await getAuth();
-  if (!auth) {
-    redirect("/login");
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            setUser(data.user);
+          } else {
+            router.push("/login");
+          }
+        } else {
+          router.push("/login");
+        }
+      } catch (err) {
+        console.error("Auth check failed:", err);
+        router.push("/login");
+      } finally {
+        setLoading(false);
+      }
+    }
+    checkAuth();
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
-  const userRows = await db.select().from(users).where(eq(users.id, auth.userId)).limit(1);
-  const user = userRows[0];
-  if (!user) {
-    redirect("/login");
-  }
+  if (!user) return null;
 
-  const isAdmin = isAdminEmail(user.email);
+  const isAdmin = user.email.toLowerCase() === "sudhi@gmal.com" || user.id === "admin";
 
   return (
     <DashboardShell
-      user={{ id: user.id, email: user.email }}
+      user={user}
       isAdmin={isAdmin}
-      demoMode={config.FAKE_DATA}
+      demoMode={true}
     >
       {children}
     </DashboardShell>

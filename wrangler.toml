@@ -14,7 +14,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "autologin-db"
-database_id = ""
+database_id = "b14a3f52-aced-4988-aa38-8f35515d1445"
 # ^ Leave empty for auto-provision via wrangler deploy
 
 # ─── R2 Bucket (OPTIONAL — comment out if not used) ─────────────────────

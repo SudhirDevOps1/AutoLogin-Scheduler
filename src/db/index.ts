@@ -13,10 +13,20 @@ import * as schema from "./schema";
 
 // The TypeScript type is always PG-based for editor inference.
 // At runtime, the actual client may be PG, Turso, or D1.
+// The TypeScript type is always PG-based for editor inference.
+// At runtime, the actual client may be PG, Turso, or D1.
 type DBType = ReturnType<typeof drizzlePg>;
 
-let _db: DBType;
+let _db: DBType | null = null;
 let _pool: Pool | null = null;
+let _d1Db: any = null;
+
+export function initD1(d1: any) {
+  if (!_d1Db && d1) {
+    const { drizzle: drizzleD1 } = require("drizzle-orm/d1");
+    _d1Db = drizzleD1(d1, { schema });
+  }
+}
 
 if (config.HAS_PG) {
   // ─── PostgreSQL ──────────────────────────────────────────────────────
@@ -65,11 +75,17 @@ if (config.HAS_PG) {
   }
 } else {
   // ─── Cloudflare D1 ───────────────────────────────────────────────────
-  // The DB binding is injected by Wrangler at runtime in production.
   console.warn("[db] No DATABASE_URL — Cloudflare D1 mode (requires wrangler runtime binding)");
-  _db = null as unknown as DBType;
 }
 
 export { _pool as pool };
-export const db = _db;
+export const db = new Proxy({} as any, {
+  get(target, prop) {
+    const actualDb = _db || _d1Db;
+    if (!actualDb) {
+      throw new Error("Database not initialized. Please call initD1(env.DB) first in D1 mode.");
+    }
+    return actualDb[prop];
+  }
+}) as unknown as DBType;
 export type DB = DBType;
