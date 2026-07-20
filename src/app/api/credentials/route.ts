@@ -23,7 +23,7 @@ export async function GET() {
 
     // Attach schedule + last log info
     const enriched = await Promise.all(
-      creds.map(async (c: any) => {
+      creds.map(async (c) => {
         const [sched] = await db
           .select()
           .from(schedules)

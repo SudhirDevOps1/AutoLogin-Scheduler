@@ -1,108 +1,75 @@
-/**
- * ─── Database Adapter (Auto-detect) ────────────────────────────────────
- *
- * Priority order (first match wins):
- *   1. Turso / libSQL  — TURSO_DATABASE_URL or DATABASE_URL starting with libsql://
- *   2. PostgreSQL      — DATABASE_URL starting with postgresql:// or postgres://
- *   3. Cloudflare D1   — no DATABASE_URL (runtime DB binding injected by Worker)
- *
- * The exported `db` has identical query API regardless of backend.
- * Only `schema.ts` (pg-core) or `schema.sqlite.ts` (sqlite-core) differ.
- */
-
-// ─── PostgreSQL imports ────────────────────────────────────────────────────
+// ─── Database Client (Multi-Backend) ────────────────────────────────────
+// Supports three backends, auto-detected from environment:
+//
+//   1. PostgreSQL   → DATABASE_URL=postgresql://...
+//   2. Turso/libSQL → DATABASE_URL=libsql://...  (or TURSO_DATABASE_URL + TURSO_AUTH_TOKEN)
+//   3. Cloudflare D1→ DATABASE_URL empty (binding injected at runtime)
+//
+// All three expose the same Drizzle query API (.select/.insert/.update/.delete).
 import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
-import { Pool }                  from "pg";
-import * as pgSchema             from "./schema";
+import type { Pool } from "pg";
+import { config } from "@/lib/config";
+import * as schema from "./schema";
 
-// ─── libSQL / Turso imports ────────────────────────────────────────────────
-import { drizzle as drizzleLibsql } from "drizzle-orm/libsql";
-import { createClient }              from "@libsql/client";
-import * as sqliteSchema             from "./schema.sqlite";
+// The TypeScript type is always PG-based for editor inference.
+// At runtime, the actual client may be PG, Turso, or D1.
+type DBType = ReturnType<typeof drizzlePg>;
 
-// ─── Detect DB mode ───────────────────────────────────────────────────────
-const RAW_URL          = process.env.DATABASE_URL          ?? "";
-const TURSO_URL        = process.env.TURSO_DATABASE_URL    ?? "";
-const TURSO_TOKEN      = process.env.TURSO_AUTH_TOKEN      ?? "";
-
-const IS_TURSO =
-  Boolean(TURSO_URL) ||
-  RAW_URL.startsWith("libsql://") ||
-  RAW_URL.startsWith("libsql+http://") ||
-  RAW_URL.startsWith("libsql+https://");
-
-const IS_PG =
-  !IS_TURSO &&
-  (RAW_URL.startsWith("postgresql://") ||
-    RAW_URL.startsWith("postgres://"));
-
-const IS_D1 = !IS_TURSO && !IS_PG;
-
-// Export mode for api/version and config
-export const DB_MODE: "pg" | "turso" | "d1" =
-  IS_TURSO ? "turso" : IS_PG ? "pg" : "d1";
-
-// ─── Build client ─────────────────────────────────────────────────────────
-let _db: any;
+let _db: DBType;
 let _pool: Pool | null = null;
 
-if (IS_TURSO) {
-  // ── Turso / libSQL ────────────────────────────────────────────────────
-  const url   = TURSO_URL || RAW_URL;
-  const token = TURSO_TOKEN;
+if (config.HAS_PG) {
+  // ─── PostgreSQL ──────────────────────────────────────────────────────
+  const { Pool: PgPool } = require("pg") as { Pool: typeof Pool };
 
-  const globalForTurso = globalThis as typeof globalThis & {
-    __autologinLibsqlClient?: ReturnType<typeof createClient>;
-  };
-
-  const client =
-    globalForTurso.__autologinLibsqlClient ??
-    createClient({
-      url,
-      ...(token ? { authToken: token } : {}),
-    });
-
-  if (process.env.NODE_ENV !== "production") {
-    globalForTurso.__autologinLibsqlClient = client;
-  }
-
-  _db = drizzleLibsql(client, { schema: sqliteSchema });
-  console.info("[db] Turso/libSQL mode →", url.replace(/\/\/.*@/, "//<token>@"));
-
-} else if (IS_PG) {
-  // ── PostgreSQL ────────────────────────────────────────────────────────
-  const globalForPg = globalThis as typeof globalThis & {
+  const globalForDb = globalThis as typeof globalThis & {
     __autologinPgPool?: Pool;
   };
 
   _pool =
-    globalForPg.__autologinPgPool ??
-    new Pool({
-      connectionString: RAW_URL,
+    globalForDb.__autologinPgPool ??
+    new PgPool({
+      connectionString: config.DATABASE_URL,
       max: 10,
-      idleTimeoutMillis: 10_000,
-      connectionTimeoutMillis: 5_000,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 5000,
     });
 
   if (process.env.NODE_ENV !== "production") {
-    globalForPg.__autologinPgPool = _pool;
+    globalForDb.__autologinPgPool = _pool;
   }
 
-  _db = drizzlePg(_pool, { schema: pgSchema });
-  console.info("[db] PostgreSQL mode");
+  _db = drizzlePg(_pool, { schema });
+} else if (config.HAS_TURSO) {
+  // ─── Turso / libSQL ──────────────────────────────────────────────────
+  const { createClient } = require("@libsql/client");
 
+  const libsqlClient = createClient({
+    url: config.TURSO_DATABASE_URL,
+    authToken: config.TURSO_AUTH_TOKEN || undefined,
+  });
+
+  const globalForDb = globalThis as typeof globalThis & {
+    __autologinTursoDb?: DBType;
+  };
+
+  if (globalForDb.__autologinTursoDb) {
+    _db = globalForDb.__autologinTursoDb;
+  } else {
+    // drizzle-orm/libsql — typed as PG for inference, runtime is SQLite
+    const { drizzle: drizzleTurso } = require("drizzle-orm/libsql");
+    _db = drizzleTurso(libsqlClient, { schema }) as unknown as DBType;
+    if (process.env.NODE_ENV !== "production") {
+      globalForDb.__autologinTursoDb = _db;
+    }
+  }
 } else {
-  // ── Cloudflare D1 (no DATABASE_URL) ──────────────────────────────────
-  // The real DB binding is injected at runtime by the Worker.
-  // This stub lets Next.js compile without errors.
-  console.info("[db] D1 / Cloudflare Worker mode (binding injected at runtime)");
-  _db = null;
+  // ─── Cloudflare D1 ───────────────────────────────────────────────────
+  // The DB binding is injected by Wrangler at runtime in production.
+  console.warn("[db] No DATABASE_URL — Cloudflare D1 mode (requires wrangler runtime binding)");
+  _db = null as unknown as DBType;
 }
 
 export { _pool as pool };
 export const db = _db;
-export { pgSchema, sqliteSchema };
-
-export type PgDB     = ReturnType<typeof drizzlePg<typeof pgSchema>>;
-export type LibsqlDB = ReturnType<typeof drizzleLibsql<typeof sqliteSchema>>;
-export type DB       = PgDB | LibsqlDB;
+export type DB = DBType;

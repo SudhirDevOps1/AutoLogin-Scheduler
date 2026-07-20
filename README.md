@@ -1,266 +1,316 @@
-# 🔐 AutoLogin Scheduler — v1.0.0
+# 🔐 AutoLogin Scheduler
 
 > **Self-hosted, privacy-first, serverless auto-login scheduler.**
-> Deploy on Cloudflare Workers + D1 (free tier) or your own PostgreSQL.
-> Built by **Sudhir Singh** ([@SudhirDevOps1](https://github.com/SudhirDevOps1)).
+> Runs on **Cloudflare Workers + D1** (free) or your own **PostgreSQL** / **Turso** database.
+> Built by **Sudhir Singh** — [@SudhirDevOps1](https://github.com/SudhirDevOps1)
 
-![Logo](public/logo.png)
+<p align="center">
+  <img src="public/logo.png" width="180" alt="AutoLogin Scheduler Logo"/>
+</p>
 
-![License: MIT](https://img.shields.io/badge/license-MIT-violet)
-![Next.js](https://img.shields.io/badge/Next.js-16-black)
-![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-orange)
-![Drizzle](https://img.shields.io/badge/Drizzle-ORM-blue)
+<p align="center">
+  <a href="https://github.com/SudhirDevOps1/AutoLogin-Scheduler/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-violet?style=flat-square" alt="MIT License"/></a>
+  <a href="https://github.com/SudhirDevOps1/AutoLogin-Scheduler/releases"><img src="https://img.shields.io/badge/version-1.0.0-blue?style=flat-square" alt="v1.0.0"/></a>
+  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square" alt="Next.js 16"/></a>
+  <a href="https://workers.cloudflare.com"><img src="https://img.shields.io/badge/Cloudflare-Workers%20%2B%20D1-orange?style=flat-square" alt="Cloudflare"/></a>
+  <a href="https://orm.drizzle.team"><img src="https://img.shields.io/badge/Drizzle-ORM-blue?style=flat-square" alt="Drizzle"/></a>
+</p>
 
----
+<p align="center">
+  <b>🌐 Live Demo:</b> Login with <code>sudhi@gmal.com</code> / <code>1Sudhi@gmal.com</code>
+  <br/>
+  <b>📚 Docs:</b> <a href="#-quick-start">Quick Start</a> · <a href="#-features">Features</a> · <a href="#-security">Security</a> · <a href="#-deploy-to-cloudflare">Deploy</a>
+</p>
 
-## 🌐 Live Preview
-
-**→ [Open App](#)** — Login: `sudhi@gmal.com` / `1Sudhi@gmal.com`
+<p align="center">
+  <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/SudhirDevOps1/AutoLogin-Scheduler">
+    <img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers"/>
+  </a>
+</p>
 
 ---
 
 ## 📑 Table of Contents
 
-| # | Section |
-|---|---------|
-| 1 | [Quick Start](#-quick-start) |
-| 2 | [FAKE_DATA Toggle](#-fakedata-toggle-production-vs-demo) |
-| 3 | [Database: PostgreSQL vs D1](#-database-postgresql-vs-cloudflare-d1) |
-| 4 | [Features](#-features) |
-| 5 | [Security](#-security-anti-hacking) |
-| 6 | [API Reference](#-api-reference-16-endpoints) |
-| 7 | [File Structure & Editing Guide](#-file-structure--editing-guide) |
-| 8 | [Deploy to Cloudflare](#-deploy-to-cloudflare-workers) |
-| 9 | [Environment Variables](#-environment-variables) |
-| 10 | [Troubleshooting](#-troubleshooting) |
+1. [Quick Start](#-quick-start)
+2. [Features](#-features)
+3. [Multi-Database Support](#-multi-database-support)
+4. [FAKE_DATA Toggle](#-fakedata-toggle-demo-vs-production)
+5. [Security](#-security)
+6. [Known Limitations](#-known-limitations)
+7. [API Reference](#-api-reference)
+8. [Deploy to Cloudflare](#-deploy-to-cloudflare)
+9. [Environment Variables](#-environment-variables)
+10. [File Structure & Editing Guide](#-file-structure--editing-guide)
+11. [Contributing](#-contributing)
+12. [License](#-license)
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
+# 1. Clone
 git clone https://github.com/SudhirDevOps1/AutoLogin-Scheduler.git
 cd AutoLogin-Scheduler
+
+# 2. Install
 npm install
-npm run setup        # Auto-configures .env + pushes DB schema + builds
-npm run dev          # → http://localhost:3000
+
+# 3. Configure (copy example, then edit .env)
+cp .env.example .env
+
+# 4. Push schema
+npx drizzle-kit push --force
+
+# 5. Start
+npm run dev
+# → Open http://localhost:3000/login
 ```
 
-**Login instantly:**
+**Default admin login** (works out of the box):
 | Email | Password |
 |-------|----------|
 | `sudhi@gmal.com` | `1Sudhi@gmal.com` |
 
----
-
-## 🎭 FAKE_DATA Toggle (Production vs Demo)
-
-```env
-# .env file
-FAKE_DATA=true    # Demo mode — auto-seeds 6 fake credentials, 6 schedules, 42 logs
-FAKE_DATA=false   # Production — zero fake data, no demo endpoints, pure app
-```
-
-| Behavior | `FAKE_DATA=true` | `FAKE_DATA=false` |
-|----------|:-:|:-:|
-| Auto-seed demo data on login/register | ✅ | ❌ |
-| `/api/demo` seed/reset endpoints | ✅ Active | ❌ 404 |
-| Demo Lab in Settings | ✅ Visible | ❌ Hidden |
-| Beta badge in sidebar | ✅ Visible | ❌ Hidden |
-| All real features (CRUD, auth, security) | ✅ | ✅ |
-
-**To go production:** Edit `.env` → `FAKE_DATA=false` → `npm run dev`
-
----
-
-## 🗄 Database Options — PostgreSQL / Turso / D1
-
-The app **auto-detects** which database to use. Priority order (first match wins):
-
-| Priority | Database | Trigger | Free tier |
-|----------|----------|---------|-----------|
-| **1st** | **Turso / libSQL** | `TURSO_DATABASE_URL=libsql://...` OR `DATABASE_URL=libsql://...` | ✅ 500MB free |
-| **2nd** | **PostgreSQL** | `DATABASE_URL=postgresql://...` | Your server |
-| **3rd** | **Cloudflare D1** | `DATABASE_URL` empty | ✅ 5GB free |
-
-### Turso / libSQL Setup (Free SQLite Cloud)
-
-```env
-# Option A — dedicated variable (recommended)
-TURSO_DATABASE_URL=libsql://your-db-name.turso.io
-TURSO_AUTH_TOKEN=your-auth-token
-
-# Option B — use DATABASE_URL directly
-DATABASE_URL=libsql://your-db-name.turso.io
-TURSO_AUTH_TOKEN=your-auth-token
-```
-
-Push schema to Turso:
-```bash
-TURSO_DATABASE_URL=libsql://... TURSO_AUTH_TOKEN=... \
-  npx drizzle-kit push --config drizzle.turso.config.ts
-# or use the npm script:
-npm run db:push:turso
-```
-
-### PostgreSQL Setup
-
-```env
-DATABASE_URL=postgresql://user:pass@host:5432/dbname
-```
-Push schema: `npm run db:push`
-
-### Cloudflare D1 Setup
-
-```env
-# DATABASE_URL = (leave empty)
-```
-Push schema: `npm run db:push:d1`
-
-The detection logic is in `src/db/index.ts` and `src/lib/config.ts`.
+> ⚠️ **Change these in `.env` before deploying to production!** See [Security](#-security).
 
 ---
 
 ## ✨ Features
 
-### Authentication
-- ✅ Register with **MX DNS email validation** (Cloudflare DoH)
-- ✅ Login with **rate limiting** (20/15min per IP, 10/15min per email)
-- ✅ **Account lockout** (5 failures → 15-min lock)
-- ✅ **PBKDF2** password hashing (210,000 iterations, SHA-512)
-- ✅ **JWT HS256** sessions with revocation table
-- ✅ **Admin login** via env vars (bypasses DB for first access)
+### 🔐 Authentication
+- ✅ Register + Login with **PBKDF2** (210,000 iterations, SHA-512)
+- ✅ **JWT HS256** sessions with 7-day expiry + revocation table
+- ✅ **Rate limiting** — DB-backed sliding window (5/hr signup, 20/15min login)
+- ✅ **Account lockout** — 5 failures → 15-min lock (auto-clears)
+- ✅ **Admin bypass** via env vars (instant access, no DB needed)
+- ✅ **MX DNS email validation** via Cloudflare DoH + 30+ disposable blocklist
 
-### Credentials
+### 🗝️ Credentials
 - ✅ CRUD with **AES-256-GCM** encryption
-- ✅ Passwords never leave the server (encrypted in DB, stripped from API)
-- ✅ Manual trigger (test login simulation)
-- ✅ Status tracking (active / paused / failed)
+- ✅ **Separate encryption key** (`ENCRYPTION_SECRET`) from JWT signing key (`AUTH_SECRET`) — best practice **key separation**
+- ✅ Passwords never leave the server (stripped from API responses)
+- ✅ Manual trigger (test login button)
+- ✅ Status tracking: `active` / `paused` / `failed`
 
-### Schedules
-- ✅ Natural language: `every 30 minutes`, `every 1 day`
+### ⏰ Schedules & Launchpad
+- ✅ Natural language: `every 30 minutes`, `every 6 hours`, `every 1 day`
 - ✅ 5-field cron: `0 */6 * * *`
-- ✅ Toggle enabled/disabled
-- ✅ Alert settings (on failure / on success)
-- ✅ Optional screenshot capture (R2/S3)
+- ✅ **Multiple schedules per credential** — different times/frequencies for the same site
+- ✅ **Auto mode** (Puppeteer headless) or **Manual Launchpad mode** per schedule
+- ✅ Toggle enabled/disabled per schedule
+- ✅ Per-schedule alert settings (on failure / on success)
+- ✅ Optional screenshot capture (R2/S3 or DB fallback)
 
-### Logs & Admin
-- ✅ Paginated login history (filter by success/failure)
-- ✅ Detail modal with duration, error, screenshot info
-- ✅ Admin panel: system stats, users, audit trail, service status
+### 🚀 Launchpad (Manual Intervention Mode)
+- ✅ When `executionMode: "manual"`, cron sends an alert instead of auto-login
+- ✅ `/dashboard/launchpad?id=xxx` — secure page to copy username/password
+- ✅ One-click "Open site" button → site opens in new tab
+- ✅ Reveal password with audit logging
+- ✅ Record success/failure after manual login
+- ✅ Works alongside auto-login schedules
+
+### 📊 Logs & Admin
+- ✅ Paginated login history with filter (success/failure/all)
+- ✅ Detail modal: duration, error message, screenshot info
+- ✅ **Admin panel** — system stats, users, active sessions, audit trail
+- ✅ **Service status** — DB, auth, email, storage, browser rendering
+
+### ☁️ Cloudflare Native
+- ✅ **D1 SQLite** (5GB free) — no PostgreSQL needed
+- ✅ **Cron Triggers** — checks due schedules every 6 hours
+- ✅ **Browser Rendering** — Cloudflare Puppeteer on the edge
+- ✅ **One-click deploy** button (see above)
+- ✅ **R2/S3 optional** — screenshots stored anywhere or nowhere
 
 ---
 
-## 🛡 Security (Anti-Hacking)
+## 🗄 Multi-Database Support
+
+The app **auto-detects** which database to use from `DATABASE_URL` — zero code changes:
+
+| Database | URL Scheme | Config |
+|----------|-----------|--------|
+| **PostgreSQL** | `postgresql://...` | `DATABASE_URL=postgresql://...` |
+| **Turso (libSQL)** | `libsql://...` | `DATABASE_URL=libsql://...` + `TURSO_AUTH_TOKEN=...` |
+| **Cloudflare D1** | *(empty)* | `DATABASE_URL=` (binding injected at runtime) |
+
+### Turso Setup (Serverless SQLite — 9GB free)
+```bash
+# Install Turso CLI
+curl -sSfL https://get.tur.so/install.sh | bash
+
+# Create database
+turso db create autologin-db
+
+# Get URL + token
+turso db show autologin-db --url
+turso db tokens create autologin-db
+
+# Set in .env
+DATABASE_URL=libsql://autologin-db-xxx.turso.io
+TURSO_AUTH_TOKEN=eyJxxx...
+
+# Push schema
+npx drizzle-kit push --force
+```
+
+**All SQL queries use cross-DB syntax:** `CAST(count(*) AS INTEGER)`, `sum(CASE WHEN x THEN 1 ELSE 0 END)` — works identically on PG, Turso, D1.
+
+---
+
+## 🎭 FAKE_DATA Toggle (Demo vs Production)
+
+Control demo data with a single env var:
+
+```env
+FAKE_DATA=true    # ← Auto-seeds 6 fake credentials, 6 schedules, 42 logs
+FAKE_DATA=false   # ← Zero demo data, no demo endpoints, pure production
+```
+
+| Behavior | `FAKE_DATA=true` | `FAKE_DATA=false` |
+|----------|:-:|:-:|
+| Auto-seed on login/register | ✅ | ❌ |
+| `/api/demo` endpoints | ✅ Active | ❌ 404 |
+| Demo Lab in Settings | ✅ Visible | ❌ Hidden |
+| Beta badge in sidebar | ✅ Visible | ❌ Hidden |
+| Real CRUD, auth, security | ✅ Always | ✅ Always |
+
+---
+
+## 🛡 Security
+
+Defense-in-depth security architecture:
 
 | Layer | Protection |
 |-------|-----------|
 | **SQL Injection** | Drizzle ORM parameterized queries — no raw SQL |
 | **Password Storage** | PBKDF2 210k iterations + SHA-512 + 128-bit salt |
 | **Timing Attack** | `crypto.timingSafeEqual` for all comparisons |
-| **Credential at Rest** | AES-256-GCM authenticated encryption |
+| **Credentials at Rest** | AES-256-GCM with **separate `ENCRYPTION_SECRET`** (key separation) |
 | **Session** | JWT HS256 + `sessions` revocation table + 7-day expiry |
-| **Rate Limiting** | DB-backed sliding window (no in-memory bypass) |
-| **Account Lockout** | 5 failures → 15-minute lock (auto-clears) |
+| **Rate Limiting** | DB-backed sliding window (survives restarts) |
+| **Account Lockout** | 5 failures → 15-min lock (auto-clears) |
 | **Bot Detection** | 30+ regex patterns (SQLi, XSS, path traversal, RCE) |
 | **Email Validation** | MX DNS lookup + 30+ disposable domain blocklist |
-| **Input Sanitization** | All inputs checked for malicious patterns |
-| **Audit Log** | Every sensitive action logged with IP hash + timestamp |
 | **Tenant Isolation** | Every query scoped by `userId` — no cross-user access |
+| **Audit Log** | Every action logged with IP hash + timestamp |
+| **Key Separation** | `AUTH_SECRET` for JWT, `ENCRYPTION_SECRET` for AES-GCM |
 
----
+### 🚨 Before Production
 
-## 📡 API Reference (16 endpoints)
+```env
+# 1. Generate unique secrets
+AUTH_SECRET=$(openssl rand -hex 32)
+ENCRYPTION_SECRET=$(openssl rand -hex 32)   # ← Different from AUTH_SECRET
+JWT_SECRET=$(openssl rand -hex 32)
 
-### Auth
-| Method | Path | Auth | Description |
-|--------|------|:----:|-------------|
-| `POST` | `/api/auth/register` | ❌ | Create account |
-| `POST` | `/api/auth/login` | ❌ | Login (admin env bypass) |
-| `POST` | `/api/auth/logout` | ✅ | Revoke session |
-| `GET` | `/api/auth/me` | ✅ | Current user + stats |
-| `GET` | `/api/auth/check-email?email=x` | ❌ | MX DNS validation |
+# 2. Change default admin
+ADMIN_EMAIL=your-real-admin@yourdomain.com
+ADMIN_PASSWORD=<strong-random-password>
 
-### Credentials
-| Method | Path | Auth | Description |
-|--------|------|:----:|-------------|
-| `GET` | `/api/credentials` | ✅ | List (encrypted passwords stripped) |
-| `POST` | `/api/credentials` | ✅ | Create (AES-GCM encrypted) |
-| `PUT` | `/api/credentials?id=x` | ✅ | Update |
-| `DELETE` | `/api/credentials?id=x` | ✅ | Delete (cascade) |
+# 3. Disable demo mode
+FAKE_DATA=false
 
-### Schedules
-| Method | Path | Auth | Description |
-|--------|------|:----:|-------------|
-| `GET` | `/api/schedules` | ✅ | List |
-| `POST` | `/api/schedules` | ✅ | Create |
-| `PUT` | `/api/schedules?id=x` | ✅ | Update |
-| `DELETE` | `/api/schedules?id=x` | ✅ | Delete |
-
-### System
-| Method | Path | Auth | Description |
-|--------|------|:----:|-------------|
-| `GET` | `/api/health` | ❌ | Health check |
-| `GET` | `/api/version` | ❌ | Version + service status |
-| `GET` | `/api/admin/overview` | Admin | System dashboard |
-| `POST` | `/api/demo` | ✅ | Seed/reset demo workspace |
-| `POST` | `/api/trigger` | ✅ | Manual login run |
-| `GET` | `/api/logs` | ✅ | Login history |
-
----
-
-## 📁 File Structure & Editing Guide
-
-| What to edit | File | Details |
-|--------------|------|---------|
-| **App name** | `package.json`, `src/app/layout.tsx` | metadata.title |
-| **Colors / theme** | `src/app/globals.css` | `@theme` block — purple/pink gradient |
-| **Admin login** | `.env` | `ADMIN_EMAIL`, `ADMIN_PASSWORD` |
-| **Logo PNG** | `public/logo.png` | Shield + clock (753KB PNG) |
-| **Logo SVG** | `public/logo.svg` | Scalable vector, crisp at any size |
-| **Favicon SVG** | `public/favicon.svg` | Browser tab icon (64px) |
-| **Demo data content** | `src/lib/demo-data.ts` | The 6 fake credentials array |
-| **FAKE_DATA / feature flags** | `src/lib/config.ts` | Central config with defaults |
-| **PBKDF2 iterations** | `src/lib/security.ts` | `PBKDF2_ITERATIONS` (210000) |
-| **AES encryption key** | `src/lib/security.ts` | `getEncryptionKey()` |
-| **Rate limits** | `src/lib/auth.ts` | `checkRateLimit()` calls |
-| **Email validation** | `src/lib/email-validation.ts` | Disposable domains, DoH |
-| **PG schema** | `src/db/schema.ts` | 7 tables — Drizzle pg-core |
-| **SQLite schema** | `src/db/schema.sqlite.ts` | Same tables — Drizzle sqlite-core |
-| **DB connection** | `src/db/index.ts` | PG pool / Turso libSQL / D1 detection |
-| **Drizzle PG config** | `drizzle.config.json` | `npm run db:push` |
-| **Drizzle Turso config** | `drizzle.turso.config.ts` | `npm run db:push:turso` |
-| **Drizzle D1 config** | `drizzle.d1.config.ts` | `npm run db:push:d1` |
-| **Landing page** | `src/app/page.tsx` | Hero, features, architecture |
-| **Login page** | `src/app/login/page.tsx` | Pre-filled demo creds |
-| **Register page** | `src/app/register/page.tsx` | MX validation UI |
-| **Dashboard** | `src/app/dashboard/page.tsx` | Overview stats |
-| **Credentials UI** | `src/app/dashboard/credentials/page.tsx` | CRUD + trigger |
-| **Schedules UI** | `src/app/dashboard/schedules/page.tsx` | Cron presets |
-| **Logs UI** | `src/app/dashboard/logs/page.tsx` | History + filter |
-| **Settings UI** | `src/app/dashboard/settings/page.tsx` | Config + demo lab |
-| **Admin panel** | `src/app/dashboard/admin/page.tsx` | System stats |
-| **Cloudflare Worker** | `src/worker/index.ts` | Hono app (D1) |
-| **Wrangler config** | `wrangler.toml` | D1 + Cron + Browser |
-| **Setup script** | `setup.js` | Interactive CLI |
-| **All env defaults** | `src/lib/config.ts` | Central config |
-
----
-
-## ☁️ Deploy to Cloudflare Workers
-
-### One-Click
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/SudhirDevOps1/AutoLogin-Scheduler)
-
-### CLI
-```bash
-npx wrangler login
-npx wrangler d1 create autologin-db
-# Copy database_id → wrangler.toml
-npx wrangler secret put AUTH_SECRET
-npm run build
-npm run deploy
+# 4. (Optional) Owner-only mode
+ALLOW_REGISTRATION=false
 ```
+
+Full guide: [SECURITY.md](SECURITY.md)
+
+---
+
+## ⚠️ Known Limitations
+
+| Limitation | Impact | Workaround |
+|-----------|--------|------------|
+| **CAPTCHA sites** | Cloudflare Puppeteer cannot solve CAPTCHAs | Use sites without CAPTCHA, or use trusted IP ranges |
+| **2FA (TOTP/SMS)** | Can't handle two-factor auth prompts | Disable 2FA on target site, or use app-specific passwords |
+| **Cloudflare Browser quota** | Free tier: limited browser rendering time | Upgrade to paid plan for heavy usage |
+| **Screenshot storage** | Requires R2/S3 for binary storage | App still works without R2 — falls back to DB reference paths |
+
+Auto-login works reliably for **any site without CAPTCHA or 2FA**.
+
+---
+
+## 📡 API Reference
+
+### Auth (5 endpoints)
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/auth/register` | Create account |
+| `POST` | `/api/auth/login` | Login (env admin bypass) |
+| `POST` | `/api/auth/logout` | Revoke session |
+| `GET` | `/api/auth/me` | Current user + stats |
+| `GET` | `/api/auth/check-email` | MX DNS validation |
+
+### Credentials (4 endpoints)
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/credentials` | List (encrypted passwords stripped) |
+| `POST` | `/api/credentials` | Create (AES-GCM encrypted) |
+| `PUT` | `/api/credentials?id=x` | Update |
+| `DELETE` | `/api/credentials?id=x` | Delete (cascade) |
+
+### Schedules (4 endpoints)
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/schedules` | List all (multiple per credential allowed) |
+| `POST` | `/api/schedules` | Create |
+| `PUT` | `/api/schedules?id=x` | Update |
+| `DELETE` | `/api/schedules?id=x` | Delete |
+
+### Launchpad & Manual (3 endpoints)
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/credentials/reveal?id=x` | Decrypt password (audit-logged) |
+| `POST` | `/api/logs/manual` | Record manual login success/failure |
+
+### System (7 endpoints)
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/health` | Health check |
+| `GET` | `/api/version` | Version + DB type + service status |
+| `GET` | `/api/admin/overview` | Admin dashboard (env-admin only) |
+| `POST` | `/api/demo` | Seed/reset demo workspace |
+| `POST` | `/api/trigger` | Manual login run |
+| `PUT` | `/api/trigger` | Cron webhook (signed) |
+| `GET` | `/api/logs` | Login history with filter/pagination |
+
+Full details: [ADMIN_GUIDE.md](ADMIN_GUIDE.md)
+
+---
+
+## ☁️ Deploy to Cloudflare
+
+### One-Click Deploy
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/SudhirDevOps1/AutoLogin-Scheduler)
+
+### Manual Deploy (CLI)
+```bash
+# 1. Install Wrangler
+npm install -g wrangler
+
+# 2. Login
+wrangler login
+
+# 3. Create D1 database
+wrangler d1 create autologin-db
+# → Copy database_id to wrangler.toml
+
+# 4. Set secrets
+wrangler secret put AUTH_SECRET
+wrangler secret put ENCRYPTION_SECRET
+wrangler secret put ADMIN_PASSWORD
+
+# 5. Deploy
+npm run build
+wrangler deploy
+```
+
+### Turso Deploy (Serverless SQLite)
+Same as PostgreSQL but with `libsql://` URL — see [Multi-Database Support](#-multi-database-support).
 
 ---
 
@@ -268,39 +318,130 @@ npm run deploy
 
 | Variable | Default | Required | Description |
 |----------|---------|:--------:|-------------|
-| `DATABASE_URL` | — | PG only | `postgresql://...` OR `libsql://...` (empty = D1) |
-| `TURSO_DATABASE_URL` | — | Turso only | `libsql://your-db.turso.io` |
-| `TURSO_AUTH_TOKEN` | — | Turso only | Turso authentication token |
-| `AUTH_SECRET` | built-in fallback | ⚠️ Prod | JWT + AES-256 encryption key |
-| `FAKE_DATA` | `true` | No | `false` = production, `true` = demo mode |
-| `ALLOW_REGISTRATION` | `true` | No | `false` = owner-only mode |
+| `DATABASE_URL` | — | Yes | `postgresql://...` OR `libsql://...` (empty = D1) |
+| `TURSO_AUTH_TOKEN` | — | Turso only | Auth token for Turso/libSQL |
+| `AUTH_SECRET` | dev fallback | ⚠️ Prod | JWT signing key |
+| `ENCRYPTION_SECRET` | derived from AUTH_SECRET | ⚠️ Prod | AES-GCM key (separate from JWT) |
+| `JWT_SECRET` | AUTH_SECRET | No | Alternative JWT key |
+| `FAKE_DATA` | `true` | No | Demo data on/off |
+| `ALLOW_REGISTRATION` | `true` | No | Block new signups |
 | `ADMIN_EMAIL` | `sudhi@gmal.com` | No | Admin login email |
 | `ADMIN_PASSWORD` | `1Sudhi@gmal.com` | No | Admin login password |
-| `RESEND_API_KEY` | — | No | Email alerts (Resend, 100/day) |
-| `BREVO_API_KEY` | — | No | Email alerts (Brevo, 300/day) |
-| `SMTP_HOST` | — | No | Email alerts (any SMTP) |
-| `S3_ENDPOINT` | — | No | Screenshot storage endpoint |
-| `S3_BUCKET_NAME` | `autologin-screenshots` | No | S3/R2 bucket name |
+| `RESEND_API_KEY` | — | No | Email alerts (Resend) |
+| `BREVO_API_KEY` | — | No | Email alerts (Brevo) |
+| `SMTP_HOST` | — | No | Email alerts (SMTP) |
+| `S3_ENDPOINT` | — | No | Screenshot storage |
+| `S3_BUCKET_NAME` | `autologin-screenshots` | No | S3 bucket |
 
-> ⚠️ **Production:** Set `AUTH_SECRET` via `wrangler secret put`. The built-in fallback is for dev only.
+See [`.env.example`](.env.example) for full template.
 
 ---
 
-## 🔧 Troubleshooting
+## 📁 File Structure & Editing Guide
 
-| Problem | Solution |
-|---------|----------|
-| Login "Internal server error" | Ensure `AUTH_SECRET` is set (or use fallback) |
-| Admin login fails | Check `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env` |
-| "Email domain does not exist" | MX DNS check blocked invalid domain — use real email |
-| "Schedule already exists" | Each credential has max 1 schedule. Use PUT to update |
-| Can't access admin panel | Only `ADMIN_EMAIL` user sees the admin link |
-| Reset all data | Dashboard → Settings → Demo Lab → Reset |
+```
+autologin-scheduler/
+├── src/
+│   ├── app/                       Next.js App Router
+│   │   ├── page.tsx               Landing page
+│   │   ├── login/                 Login (pre-filled demo)
+│   │   ├── register/              Register with MX validation
+│   │   ├── dashboard/             User dashboard
+│   │   │   ├── page.tsx           Overview stats
+│   │   │   ├── credentials/       CRUD + trigger + reveal API
+│   │   │   ├── schedules/         Multiple schedules + auto/manual mode
+│   │   │   ├── launchpad/         Manual login (copy credentials + record)
+│   │   │   ├── logs/              Login history
+│   │   │   ├── settings/          Config + demo lab
+│   │   │   └── admin/             Admin panel
+│   │   ├── docs/                  API docs
+│   │   ├── deploy/                Deploy guide
+│   │   └── api/                   19 REST endpoints
+│   ├── components/
+│   │   ├── dashboard-shell.tsx
+│   │   ├── nav-auth.tsx
+│   │   └── logo.tsx               SVG logo component
+│   ├── db/
+│   │   ├── schema.ts              Barrel (auto-selects PG or Turso)
+│   │   ├── schema-pg.ts           PostgreSQL schema
+│   │   ├── schema-turso.ts        Turso/SQLite schema
+│   │   └── index.ts               DB client (PG / Turso / D1 detection)
+│   ├── lib/
+│   │   ├── config.ts              Central env config (all defaults)
+│   │   ├── security.ts            PBKDF2, AES-GCM, JWT, bot detection
+│   │   ├── auth.ts                Session, rate limit, audit
+│   │   ├── email-validation.ts    MX DNS via Cloudflare DoH
+│   │   └── demo-data.ts           FAKE_DATA engine
+│   └── worker/
+│       └── index.ts               Cloudflare Worker entry
+├── public/
+│   ├── logo.png                   AI-generated 512×512
+│   ├── logo.svg                   Vector logo (crisp any size)
+│   ├── favicon.png                64×64 browser tab
+│   └── favicon.svg                Vector favicon
+├── .github/
+│   ├── ISSUE_TEMPLATE/            Bug + feature templates
+│   ├── workflows/ci.yml           Build + typecheck on push
+│   ├── FUNDING.yml
+│   └── pull_request_template.md
+├── wrangler.toml                  Cloudflare config
+├── .env.example                   Env template with Turso
+├── README.md                      ← You are here
+├── CHANGELOG.md                   Version history
+├── CONTRIBUTING.md                Contribution guide
+├── SECURITY.md                    Security policy + reporting
+├── ADMIN_GUIDE.md                 Developer reference
+└── LICENSE                        MIT
+```
+
+### Common Edits
+| What to change | File |
+|----------------|------|
+| App name | `src/app/layout.tsx` (metadata), `package.json` |
+| Colors / theme | `src/app/globals.css` (`@theme`) |
+| Logo | `public/logo.svg`, `public/logo.png`, `src/components/logo.tsx` |
+| Admin credentials | `.env` (`ADMIN_EMAIL`, `ADMIN_PASSWORD`) |
+| Demo data content | `src/lib/demo-data.ts` |
+| Rate limits | `src/lib/auth.ts` (`checkRateLimit()` calls) |
+| PBKDF2 iterations | `src/lib/security.ts` (`PBKDF2_ITERATIONS`) |
+| Email disposable blocklist | `src/lib/email-validation.ts` |
+| DB schema | `src/db/schema-pg.ts` + `schema-turso.ts` |
+| All env defaults | `src/lib/config.ts` |
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Coding standards
+- PR process
+- Bug reporting guidelines
+- Feature request format
+
+**Quick contributor checklist:**
+1. Fork → clone → branch
+2. `npm install && npm run dev`
+3. Make changes with tests
+4. `npm run typecheck && npm run build`
+5. Open PR against `main`
 
 ---
 
 ## 📜 License
 
-**MIT** — Free to self-host, modify, redistribute. Credit **Sudhir Singh**.
+**MIT** — Free to self-host, modify, redistribute. See [LICENSE](LICENSE).
 
-**GitHub:** [SudhirDevOps1/AutoLogin-Scheduler](https://github.com/SudhirDevOps1/AutoLogin-Scheduler)
+If you host or redistribute, please credit **Sudhir Singh** and link to the original repo:
+[github.com/SudhirDevOps1/AutoLogin-Scheduler](https://github.com/SudhirDevOps1/AutoLogin-Scheduler)
+
+---
+
+<p align="center">
+  Built with 🟣 by <a href="https://github.com/SudhirDevOps1">Sudhir Singh</a>
+  <br/>
+  <a href="https://github.com/SudhirDevOps1/AutoLogin-Scheduler">⭐ Star on GitHub</a>
+  ·
+  <a href="https://github.com/SudhirDevOps1/AutoLogin-Scheduler/issues">🐛 Report Bug</a>
+  ·
+  <a href="https://github.com/SudhirDevOps1/AutoLogin-Scheduler/issues/new?template=feature_request.md">✨ Request Feature</a>
+</p>

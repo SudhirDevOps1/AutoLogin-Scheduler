@@ -1,195 +1,36 @@
-import {
-  pgTable,
-  text,
-  integer,
-  bigint,
-  boolean,
-  index,
-  uniqueIndex,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+// ─── Schema Barrel (Runtime Multi-DB Selection) ─────────────────────────
+// Exports the correct schema based on DATABASE_URL at runtime:
+//   libsql://  → Turso/libSQL (SQLite)
+//   postgresql:// → PostgreSQL
+//   empty → Cloudflare D1
+//
+// TypeScript sees PG types everywhere. At runtime, the matching schema
+// objects are used with the matching Drizzle driver. Both API surfaces
+// (.select / .insert / .update / .delete / .onConflictDoUpdate) are
+// identical across PG and SQLite Drizzle clients.
 
-// ─── Users ────────────────────────────────────────────────────────────────
-export const users = pgTable(
-  "users",
-  {
-    id: text("id").primaryKey(),
-    email: text("email").notNull(),
-    passwordHash: text("password_hash").notNull(),
-    passwordSalt: text("password_salt").notNull(),
-    emailVerified: boolean("email_verified").default(false).notNull(),
-    lockedUntil: bigint("locked_until", { mode: "number" }),
-    failedAttempts: integer("failed_attempts").default(0).notNull(),
-    createdAt: bigint("created_at", { mode: "number" }).notNull(),
-  },
-  (t) => ({
-    emailIdx: uniqueIndex("users_email_idx").on(t.email),
-  })
-);
+import { config } from "@/lib/config";
+import * as pgSchema from "./schema-pg";
+import * as tursoSchema from "./schema-turso";
 
-export const usersRelations = relations(users, ({ many }) => ({
-  credentials: many(credentials),
-  auditLogs: many(auditLogs),
-  sessions: many(sessions),
-}));
+const useTurso = config.DB_TYPE === "turso";
+const active = useTurso ? tursoSchema : pgSchema;
 
-// ─── Sessions (JWT revocation) ────────────────────────────────────────────
-export const sessions = pgTable(
-  "sessions",
-  {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    tokenHash: text("token_hash").notNull(),
-    revoked: boolean("revoked").default(false).notNull(),
-    expiresAt: bigint("expires_at", { mode: "number" }).notNull(),
-    createdAt: bigint("created_at", { mode: "number" }).notNull(),
-  },
-  (t) => ({
-    userIdx: index("sessions_user_idx").on(t.userId),
-  })
-);
+export const users = active.users as typeof pgSchema.users;
+export const sessions = active.sessions as typeof pgSchema.sessions;
+export const credentials = active.credentials as typeof pgSchema.credentials;
+export const schedules = active.schedules as typeof pgSchema.schedules;
+export const loginLogs = active.loginLogs as typeof pgSchema.loginLogs;
+export const auditLogs = active.auditLogs as typeof pgSchema.auditLogs;
+export const rateLimits = active.rateLimits as typeof pgSchema.rateLimits;
 
-// ─── Credentials (encrypted with AES-GCM) ─────────────────────────────────
-export const credentials = pgTable(
-  "credentials",
-  {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: text("name").notNull(), // friendly label like "Mega.nz Personal"
-    siteUrl: text("site_url").notNull(),
-    username: text("username").notNull(),
-    encryptedPassword: text("encrypted_password").notNull(), // iv:ciphertext:tag (base64)
-    loginSelector: text("login_selector"), // optional CSS selector for username field
-    passwordSelector: text("password_selector"),
-    submitSelector: text("submit_selector"),
-    successIndicator: text("success_indicator"),
-    lastLogin: bigint("last_login", { mode: "number" }),
-    status: text("status").default("active").notNull(), // active | paused | failed
-    createdAt: bigint("created_at", { mode: "number" }).notNull(),
-  },
-  (t) => ({
-    userIdx: index("credentials_user_idx").on(t.userId),
-  })
-);
-
-export const credentialsRelations = relations(credentials, ({ one, many }) => ({
-  user: one(users, {
-    fields: [credentials.userId],
-    references: [users.id],
-  }),
-  schedules: many(schedules),
-  logs: many(loginLogs),
-}));
-
-// ─── Schedules ────────────────────────────────────────────────────────────
-export const schedules = pgTable(
-  "schedules",
-  {
-    id: text("id").primaryKey(),
-    credentialId: text("credential_id")
-      .notNull()
-      .references(() => credentials.id, { onDelete: "cascade" }),
-    cronExpr: text("cron_expr").notNull(), // e.g., "0 0 */30 * *"
-    nextRun: bigint("next_run", { mode: "number" }).notNull(),
-    enabled: boolean("enabled").default(true).notNull(),
-    alertOnFailure: boolean("alert_on_failure").default(true).notNull(),
-    alertOnSuccess: boolean("alert_on_success").default(false).notNull(),
-    takeScreenshot: boolean("take_screenshot").default(true).notNull(),
-    createdAt: bigint("created_at", { mode: "number" }).notNull(),
-  },
-  (t) => ({
-    credIdx: index("schedules_cred_idx").on(t.credentialId),
-    nextRunIdx: index("schedules_next_run_idx").on(t.nextRun),
-  })
-);
-
-export const schedulesRelations = relations(schedules, ({ one }) => ({
-  credential: one(credentials, {
-    fields: [schedules.credentialId],
-    references: [credentials.id],
-  }),
-}));
-
-// ─── Login Logs ───────────────────────────────────────────────────────────
-export const loginLogs = pgTable(
-  "login_logs",
-  {
-    id: text("id").primaryKey(),
-    credentialId: text("credential_id")
-      .notNull()
-      .references(() => credentials.id, { onDelete: "cascade" }),
-    runTime: bigint("run_time", { mode: "number" }).notNull(),
-    durationMs: integer("duration_ms"),
-    success: boolean("success").notNull(),
-    screenshotKey: text("screenshot_key"), // R2/S3 key (NULL if not configured)
-    screenshotUrl: text("screenshot_url"), // signed/temporary URL if available
-    errorMessage: text("error_message"),
-    ipAddress: text("ip_address"),
-    createdAt: bigint("created_at", { mode: "number" }).notNull(),
-  },
-  (t) => ({
-    credIdx: index("logs_cred_idx").on(t.credentialId),
-    runTimeIdx: index("logs_run_time_idx").on(t.runTime),
-  })
-);
-
-export const loginLogsRelations = relations(loginLogs, ({ one }) => ({
-  credential: one(credentials, {
-    fields: [loginLogs.credentialId],
-    references: [credentials.id],
-  }),
-}));
-
-// ─── Audit Logs ───────────────────────────────────────────────────────────
-export const auditLogs = pgTable(
-  "audit_logs",
-  {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    action: text("action").notNull(),
-    targetType: text("target_type"), // credential | schedule | user
-    targetId: text("target_id"),
-    ipHash: text("ip_hash"),
-    userAgent: text("user_agent"),
-    metadata: text("metadata"), // JSON
-    createdAt: bigint("created_at", { mode: "number" }).notNull(),
-  },
-  (t) => ({
-    userIdx: index("audit_user_idx").on(t.userId),
-    createdAtIdx: index("audit_created_idx").on(t.createdAt),
-  })
-);
-
-export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
-  user: one(users, {
-    fields: [auditLogs.userId],
-    references: [users.id],
-  }),
-}));
-
-// ─── Rate Limits (DB-backed) ──────────────────────────────────────────────
-export const rateLimits = pgTable(
-  "rate_limits",
-  {
-    key: text("key").primaryKey(), // e.g. "signup:ip:<hash>", "login:email:<hash>"
-    count: integer("count").default(0).notNull(),
-    windowEnd: bigint("window_end", { mode: "number" }).notNull(),
-  }
-);
-
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-export type Session = typeof sessions.$inferSelect;
-export type Credential = typeof credentials.$inferSelect;
-export type NewCredential = typeof credentials.$inferInsert;
-export type Schedule = typeof schedules.$inferSelect;
-export type NewSchedule = typeof schedules.$inferInsert;
-export type LoginLog = typeof loginLogs.$inferSelect;
-export type AuditLog = typeof auditLogs.$inferSelect;
-export type RateLimit = typeof rateLimits.$inferSelect;
+export type User = pgSchema.User;
+export type NewUser = pgSchema.NewUser;
+export type Session = pgSchema.Session;
+export type Credential = pgSchema.Credential;
+export type NewCredential = pgSchema.NewCredential;
+export type Schedule = pgSchema.Schedule;
+export type NewSchedule = pgSchema.NewSchedule;
+export type LoginLog = pgSchema.LoginLog;
+export type AuditLog = pgSchema.AuditLog;
+export type RateLimit = pgSchema.RateLimit;

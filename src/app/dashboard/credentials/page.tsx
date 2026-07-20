@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent } from "react";
+import Link from "next/link";
 import {
   Plus,
   KeyRound,
@@ -12,6 +13,7 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertCircle,
+  Rocket,
 } from "lucide-react";
 
 interface Credential {
@@ -147,10 +149,17 @@ export default function CredentialsPage() {
                   <h3 className="font-semibold truncate">{c.name}</h3>
                 </div>
                 <div className="flex items-center gap-1">
+                  <Link
+                    href={`/dashboard/launchpad?id=${c.id}`}
+                    title="Launchpad (Manual Login)"
+                    className="p-1.5 rounded-md text-text-muted hover:text-accent hover:bg-accent/10 transition block"
+                  >
+                    <Rocket className="w-4 h-4" />
+                  </Link>
                   <button
                     onClick={() => handleTrigger(c.id)}
                     disabled={triggering === c.id}
-                    title="Test login now"
+                    title="Test login now (Headless)"
                     className="p-1.5 rounded-md text-text-muted hover:text-success hover:bg-success/10 transition disabled:opacity-50"
                   >
                     {triggering === c.id ? (

@@ -28,13 +28,12 @@ export default function DeployPage() {
             </p>
           </div>
           <a
-            href="https://deploy.workers.cloudflare.com/?url=https://github.com/example/autologin-scheduler"
+            href="https://deploy.workers.cloudflare.com/?url=https://github.com/SudhirDevOps1/AutoLogin-Scheduler"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 py-3 rounded-xl bg-white text-bg font-semibold hover:opacity-90 transition flex items-center gap-2 whitespace-nowrap"
+            className="px-6 py-3 rounded-xl bg-white text-bg font-semibold hover:opacity-90 transition flex items-center gap-2 whitespace-nowrap glow-purple"
           >
-            <Cloud className="w-4 h-4" />
-            Deploy to Cloudflare
+            <img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare Workers" className="h-8" />
           </a>
         </div>
       </section>
@@ -165,15 +164,27 @@ export default function DeployPage() {
         </div>
       </section>
 
+      <section className="rounded-xl border border-warning/30 bg-warning/5 p-6 mt-8">
+        <h2 className="text-xl font-bold mb-3 flex items-center gap-2">
+          <span className="text-warning">⚠️</span> Known Limitations
+        </h2>
+        <ul className="space-y-2 text-sm text-text-muted">
+          <li><strong className="text-text">CAPTCHA sites:</strong> Puppeteer cannot solve CAPTCHAs — trigger returns error</li>
+          <li><strong className="text-text">2FA (TOTP/SMS):</strong> Sites with two-factor auth not supported</li>
+          <li><strong className="text-text">Browser quota:</strong> Free tier has limited rendering time</li>
+          <li><strong className="text-text">Screenshots:</strong> Requires R2/S3 for binary storage (falls back to DB reference)</li>
+        </ul>
+      </section>
+
       <section className="mt-10 text-center">
         <a
-          href="https://github.com/example/autologin-scheduler"
+          href="https://github.com/SudhirDevOps1/AutoLogin-Scheduler"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 text-text-muted hover:text-text transition"
         >
           <ExternalLink className="w-4 h-4" />
-          <span>View on GitHub</span>
+          <span>⭐ Star on GitHub</span>
         </a>
       </section>
     </main>

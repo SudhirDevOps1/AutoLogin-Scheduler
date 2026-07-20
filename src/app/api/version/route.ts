@@ -11,7 +11,7 @@ export async function GET() {
     author: "Sudhir Singh",
     github: "https://github.com/SudhirDevOps1/AutoLogin-Scheduler",
     fakeData: isFakeData(),
-    database: config.DB_LABEL,   // "postgresql" | "turso-libsql" | "cloudflare-d1"
+    database: config.DB_TYPE,
     s3: config.HAS_STORAGE,
     email: config.HAS_EMAIL,
     auth: true,

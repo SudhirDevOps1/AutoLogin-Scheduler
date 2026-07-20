@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
     const {
       credentialId,
       cronExpr,
+      executionMode = "auto",
       enabled = true,
       alertOnFailure = true,
       alertOnSuccess = false,
@@ -107,6 +108,7 @@ export async function POST(req: NextRequest) {
     } = body as {
       credentialId?: string;
       cronExpr?: string;
+      executionMode?: string;
       enabled?: boolean;
       alertOnFailure?: boolean;
       alertOnSuccess?: boolean;
@@ -138,19 +140,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Credential not found" }, { status: 404 });
     }
 
-    // Check if already scheduled
-    const existingRows = await db
-      .select()
-      .from(schedules)
-      .where(eq(schedules.credentialId, credentialId))
-      .limit(1);
-    const existing = existingRows[0];
-    if (existing) {
-      return NextResponse.json(
-        { error: "Schedule already exists for this credential. Use PUT to update." },
-        { status: 409 }
-      );
-    }
+    // Multiple schedules per credential are ALLOWED
+    // (e.g., different cron expressions for different times of day).
+    // The unique constraint is only on schedule.id, not credential_id.
 
     const intervalMs = parseCronToMs(cronExpr);
     const nextRun = Date.now() + intervalMs;
@@ -160,6 +152,7 @@ export async function POST(req: NextRequest) {
       id: schedId,
       credentialId,
       cronExpr,
+      executionMode,
       nextRun,
       enabled,
       alertOnFailure,
@@ -227,12 +220,14 @@ export async function PUT(req: NextRequest) {
 
     const {
       cronExpr,
+      executionMode,
       enabled,
       alertOnFailure,
       alertOnSuccess,
       takeScreenshot,
     } = body as {
       cronExpr?: string;
+      executionMode?: string;
       enabled?: boolean;
       alertOnFailure?: boolean;
       alertOnSuccess?: boolean;
@@ -247,6 +242,7 @@ export async function PUT(req: NextRequest) {
       updates.cronExpr = cronExpr;
       updates.nextRun = Date.now() + parseCronToMs(cronExpr);
     }
+    if (executionMode !== undefined) updates.executionMode = executionMode;
     if (enabled !== undefined) updates.enabled = enabled;
     if (alertOnFailure !== undefined) updates.alertOnFailure = alertOnFailure;
     if (alertOnSuccess !== undefined) updates.alertOnSuccess = alertOnSuccess;

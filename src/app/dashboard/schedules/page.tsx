@@ -29,6 +29,7 @@ interface Schedule {
   alertOnFailure: boolean;
   alertOnSuccess: boolean;
   takeScreenshot: boolean;
+  executionMode: string;
   createdAt: number;
   credentialName: string;
   siteUrl: string;
@@ -176,7 +177,7 @@ export default function SchedulesPage() {
                   </td>
                   <td className="px-5 py-4">
                     <div className="text-xs text-text-muted">{formatCountdown(s.nextRun)}</div>
-                    <div className="text-xs text-text-dim">{new Date(s.nextRun).toLocaleString()}</div>
+                    <div className="text-[10px] text-text-dim mt-0.5 uppercase tracking-wider">{s.executionMode}</div>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-1">
@@ -263,6 +264,7 @@ function ScheduleForm({
     credentialId: initial?.credentialId || credentials[0]?.id || "",
     cronExpr: initial?.cronExpr || "every 6 hours",
     enabled: initial?.enabled ?? true,
+    executionMode: initial?.executionMode || "auto",
     alertOnFailure: initial?.alertOnFailure ?? true,
     alertOnSuccess: initial?.alertOnSuccess ?? false,
     takeScreenshot: initial?.takeScreenshot ?? true,
@@ -338,6 +340,23 @@ function ScheduleForm({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-2">
+            <label className={`p-3 rounded-lg border cursor-pointer transition ${form.executionMode === 'auto' ? 'border-accent bg-accent/5' : 'border-border hover:border-accent/30'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <input type="radio" checked={form.executionMode === 'auto'} onChange={() => setForm({...form, executionMode: 'auto'})} className="accent-accent" />
+                <span className="text-sm font-semibold text-text">Auto Login</span>
+              </div>
+              <p className="text-xs text-text-muted ml-5">Puppeteer headless browser.</p>
+            </label>
+            <label className={`p-3 rounded-lg border cursor-pointer transition ${form.executionMode === 'manual' ? 'border-accent bg-accent/5' : 'border-border hover:border-accent/30'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <input type="radio" checked={form.executionMode === 'manual'} onChange={() => setForm({...form, executionMode: 'manual'})} className="accent-accent" />
+                <span className="text-sm font-semibold text-text">Manual Launchpad</span>
+              </div>
+              <p className="text-xs text-text-muted ml-5">Get alert to login manually.</p>
+            </label>
           </div>
 
           <div>

@@ -111,9 +111,8 @@ export async function seedDemoWorkspace(
     return { seeded: false, credentials: 0, schedules: 0, logs: 0 };
   }
 
-  const existing = await db.query.credentials.findFirst({
-    where: eq(credentials.userId, userId),
-  });
+  const existingRows = await db.select().from(credentials).where(eq(credentials.userId, userId)).limit(1);
+  const existing = existingRows[0];
 
   if (existing && !options.force) {
     return { seeded: false, credentials: 0, schedules: 0, logs: 0 };

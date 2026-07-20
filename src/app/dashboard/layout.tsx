@@ -15,9 +15,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     redirect("/login");
   }
 
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, auth.userId),
-  });
+  const userRows = await db.select().from(users).where(eq(users.id, auth.userId)).limit(1);
+  const user = userRows[0];
   if (!user) {
     redirect("/login");
   }

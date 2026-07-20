@@ -36,21 +36,21 @@ export async function GET() {
       recentUsers,
       recentAudits,
     ] = await Promise.all([
-      db.select({ count: sql<number>`count(*)::int` }).from(users),
-      db.select({ count: sql<number>`count(*)::int` }).from(credentials),
-      db.select({ count: sql<number>`count(*)::int` }).from(schedules),
+      db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(users),
+      db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(credentials),
+      db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(schedules),
       db
-        .select({ count: sql<number>`count(*)::int` })
+        .select({ count: sql<number>`CAST(count(*) AS INTEGER)` })
         .from(schedules)
         .where(eq(schedules.enabled, true)),
       db.select({
-        total: sql<number>`count(*)::int`,
-        success: sql<number>`count(*) FILTER (WHERE ${loginLogs.success} = true)::int`,
-        failed: sql<number>`count(*) FILTER (WHERE ${loginLogs.success} = false)::int`,
-        avgDuration: sql<number>`coalesce(avg(${loginLogs.durationMs}), 0)::int`,
+        total: sql<number>`CAST(count(*) AS INTEGER)`,
+        success: sql<number>`CAST(sum(CASE WHEN ${loginLogs.success} THEN 1 ELSE 0 END) AS INTEGER)`,
+        failed: sql<number>`CAST(sum(CASE WHEN NOT ${loginLogs.success} THEN 1 ELSE 0 END) AS INTEGER)`,
+        avgDuration: sql<number>`CAST(coalesce(avg(${loginLogs.durationMs}), 0) AS INTEGER)`,
       }).from(loginLogs),
       db
-        .select({ count: sql<number>`count(*)::int` })
+        .select({ count: sql<number>`CAST(count(*) AS INTEGER)` })
         .from(sessions)
         .where(eq(sessions.revoked, false)),
       db
@@ -101,14 +101,7 @@ export async function GET() {
       recentUsers,
       recentAudits,
       services: {
-        database: {
-          configured: config.HAS_PG || config.HAS_TURSO,
-          label: config.HAS_TURSO
-            ? "Turso / libSQL"
-            : config.HAS_PG
-            ? "PostgreSQL + Drizzle"
-            : "Cloudflare D1",
-        },
+        database: { configured: config.HAS_PG, label: config.HAS_PG ? "PostgreSQL + Drizzle" : "Cloudflare D1" },
         auth: { configured: true, label: "JWT + PBKDF2" },
         email: {
           configured: config.HAS_EMAIL,

@@ -1,28 +1,23 @@
 # ─── AutoLogin Scheduler — Cloudflare Worker Config ──────────────────
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
 
+
 name = "autologin-scheduler"
 main = "src/worker/index.ts"
 compatibility_date = "2026-07-01"
 compatibility_flags = ["nodejs_compat"]
 
-# ─── Database ────────────────────────────────────────────────────────────
-# Option 1: Cloudflare D1 (default — free SQLite, 5GB)
-#   Create: npx wrangler d1 create autologin-db
-#   Push schema: npx wrangler d1 migrations apply DB --remote
+# ─── D1 Database (required) ─────────────────────────────────────────────
+# Serverless SQLite, 5 GB free tier.
+# Create with: npx wrangler d1 create autologin-db
+# Then paste the database_id below.
 [[d1_databases]]
 binding = "DB"
 database_name = "autologin-db"
 database_id = ""
-# ^ Filled automatically by wrangler deploy
+# ^ Leave empty for auto-provision via wrangler deploy
 
-# Option 2: Turso/libSQL — set these as wrangler secrets instead:
-#   npx wrangler secret put TURSO_DATABASE_URL
-#   npx wrangler secret put TURSO_AUTH_TOKEN
-# When TURSO_DATABASE_URL is set, the app auto-uses Turso (no D1 binding needed).
-
-# ─── R2 Bucket (OPTIONAL — screenshots) ─────────────────────────────────
-# Uncomment to enable screenshot uploads:
+# ─── R2 Bucket (OPTIONAL — comment out if not used) ─────────────────────
 # [[r2_buckets]]
 # binding = "FILES_BUCKET"
 # bucket_name = "autologin-screenshots"
@@ -32,25 +27,21 @@ database_id = ""
 [triggers]
 crons = ["0 */6 * * *"]
 
-# ─── Browser Rendering (Puppeteer) ──────────────────────────────────────
+# ─── Browser Rendering (for Puppeteer auto-login) ───────────────────────
 [browser]
 binding = "BROWSER"
 
-# ─── Vars (non-secret) ──────────────────────────────────────────────────
+# ─── Environment Variables ──────────────────────────────────────────────
+# Secrets (use `wrangler secret put`):
+#   AUTH_SECRET      : required — JWT signing secret
+#   JWT_SECRET       : fallback — same as AUTH_SECRET
+#   ADMIN_EMAIL      : optional — env-based admin bypass
+#   ADMIN_PASSWORD   : optional — env-based admin password
+#   RESEND_API_KEY   : optional — email alerts
+#   RESEND_FROM      : optional — sender email
+#   S3_ACCESS_KEY_ID : optional — R2 upload
+#   S3_SECRET_ACCESS_KEY : optional
+
 [vars]
 ALLOW_REGISTRATION = "true"
 FAKE_DATA = "true"
-# Set FAKE_DATA = "false" before going to production!
-
-# ─── Secrets (run wrangler secret put <NAME>) ────────────────────────────
-# AUTH_SECRET          → JWT signing + AES encryption (openssl rand -hex 32)
-# ADMIN_EMAIL          → admin bypass email
-# ADMIN_PASSWORD       → admin bypass password
-# TURSO_DATABASE_URL   → libsql://your-db.turso.io  (if using Turso over D1)
-# TURSO_AUTH_TOKEN     → Turso auth token
-# RESEND_API_KEY       → email alerts via Resend (100/day free)
-# RESEND_FROM          → sender email
-# BREVO_API_KEY        → email alerts via Brevo (300/day free)
-# BREVO_FROM           → sender email
-# SMTP_HOST / SMTP_USER / SMTP_PASS / SMTP_FROM → generic SMTP
-# S3_ENDPOINT / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY / S3_BUCKET_NAME

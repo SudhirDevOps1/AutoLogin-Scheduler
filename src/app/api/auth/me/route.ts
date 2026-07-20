@@ -21,18 +21,18 @@ export async function GET() {
 
     // Stats
     const [credCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
+      .select({ count: sql<number>`CAST(count(*) AS INTEGER)` })
       .from(credentials)
       .where(eq(credentials.userId, auth.userId));
 
     const [scheduleCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
+      .select({ count: sql<number>`CAST(count(*) AS INTEGER)` })
       .from(schedules)
       .innerJoin(credentials, eq(schedules.credentialId, credentials.id))
       .where(eq(credentials.userId, auth.userId));
 
     const [activeSchedules] = await db
-      .select({ count: sql<number>`count(*)::int` })
+      .select({ count: sql<number>`CAST(count(*) AS INTEGER)` })
       .from(schedules)
       .innerJoin(credentials, eq(schedules.credentialId, credentials.id))
       .where(
@@ -61,8 +61,8 @@ export async function GET() {
     // Success rate (last 24h)
     const [stats24h] = await db
       .select({
-        total: sql<number>`count(*)::int`,
-        success: sql<number>`count(*) FILTER (WHERE ${loginLogs.success} = true)::int`,
+        total: sql<number>`CAST(count(*) AS INTEGER)`,
+        success: sql<number>`CAST(sum(CASE WHEN ${loginLogs.success} THEN 1 ELSE 0 END) AS INTEGER)`,
       })
       .from(loginLogs)
       .innerJoin(credentials, eq(loginLogs.credentialId, credentials.id))

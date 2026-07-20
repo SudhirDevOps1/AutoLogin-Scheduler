@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     // ── 2. Registration open? ──────────────────────────────────────────────
     if (!config.ALLOW_REGISTRATION) {
-      const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(users);
+      const [{ count }] = await db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(users);
       if (count > 0) {
         return NextResponse.json({ error: "Registration is currently closed" }, { status: 403 });
       }

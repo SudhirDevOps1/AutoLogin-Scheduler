@@ -4,6 +4,7 @@ import { credentials, schedules, loginLogs } from "@/db/schema";
 import { eq, and, lte, sql } from "drizzle-orm";
 import { requireAuth, AuthError } from "@/lib/auth";
 import { generateId, decryptCredential } from "@/lib/security";
+import { config } from "@/lib/config";
 
 // ─── POST /api/trigger ────────────────────────────────────────────────────
 // Manually trigger a login for a credential. In production on Cloudflare,
@@ -75,10 +76,14 @@ export async function POST(req: NextRequest) {
       ? null
       : failureReasons[Math.floor(Math.random() * failureReasons.length)];
 
-    // R2/S3 screenshot upload (OPTIONAL)
-    const hasS3 = Boolean(process.env.S3_ENDPOINT && process.env.S3_BUCKET_NAME);
-    const screenshotKey = hasS3 && willSucceed
-      ? `screenshots/${cred.id}/${logId}.png`
+    // R2/S3 screenshot upload (OPTIONAL — falls back to local DB storage if absent)
+    // If S3 not configured, screenshot metadata is still saved to DB for reference,
+    // just without the actual binary file.
+    const hasS3 = config.HAS_STORAGE;
+    const screenshotKey = willSucceed
+      ? (hasS3
+          ? `screenshots/${cred.id}/${logId}.png`
+          : `local://screenshots/${cred.id}/${logId}.png`)
       : null;
     const screenshotUrl = screenshotKey
       ? `/api/screenshots/${encodeURIComponent(screenshotKey)}`
@@ -173,7 +178,7 @@ export async function PUT(req: NextRequest) {
   try {
     // Internal cron calls must always be signed, including beta mode.
     const authHeader = req.headers.get("authorization");
-    const cronSecret = process.env.AUTH_SECRET || process.env.JWT_SECRET;
+    const cronSecret = config.AUTH_SECRET;
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Invalid cron authorization" }, { status: 401 });
     }
@@ -184,10 +189,12 @@ export async function PUT(req: NextRequest) {
         id: schedules.id,
         credentialId: schedules.credentialId,
         cronExpr: schedules.cronExpr,
+        executionMode: schedules.executionMode,
         alertOnFailure: schedules.alertOnFailure,
         alertOnSuccess: schedules.alertOnSuccess,
         takeScreenshot: schedules.takeScreenshot,
         siteUrl: credentials.siteUrl,
+        name: credentials.name,
       })
       .from(schedules)
       .innerJoin(credentials, eq(schedules.credentialId, credentials.id))
@@ -207,16 +214,32 @@ export async function PUT(req: NextRequest) {
 
     for (const [index, sched] of dueSchedules.entries()) {
       const logId = generateId();
-      const success = (now + index + sched.id.length) % 7 !== 0;
-      const durationMs = 2400 + ((index * 947 + sched.id.length * 113) % 5100);
-      const errorMessage = success ? null : "Beta browser simulation: login selector timed out";
-      const hasStorage = Boolean(process.env.S3_ENDPOINT && process.env.S3_BUCKET_NAME);
-      const screenshotKey = sched.takeScreenshot && hasStorage
-        ? `screenshots/${sched.credentialId}/${logId}.png`
-        : null;
       const nextRun = now + parseCronToMs(sched.cronExpr);
-      const alertQueued =
-        (!success && sched.alertOnFailure) || (success && sched.alertOnSuccess);
+      let success = false;
+      let durationMs = 0;
+      let errorMessage: string | null = null;
+      let screenshotKey: string | null = null;
+      let alertQueued = false;
+      let credStatus = "failed";
+
+      if (sched.executionMode === "manual") {
+        // Manual Intervention Mode: Just send an alert and log a "Pending Manual Action" entry.
+        errorMessage = "Action Required: Manual Login via Launchpad";
+        credStatus = "active"; // Keep active since it's waiting on user
+        alertQueued = true;
+        console.log(`[ALERT] Time to login to ${sched.name}. Click here: /dashboard/launchpad?id=${sched.credentialId}`);
+      } else {
+        // Auto / Puppeteer Mode
+        success = (now + index + sched.id.length) % 7 !== 0;
+        durationMs = 2400 + ((index * 947 + sched.id.length * 113) % 5100);
+        errorMessage = success ? null : "Beta browser simulation: login selector timed out";
+        credStatus = success ? "active" : "failed";
+        const hasStorage = config.HAS_STORAGE;
+        screenshotKey = sched.takeScreenshot && hasStorage
+          ? `screenshots/${sched.credentialId}/${logId}.png`
+          : null;
+        alertQueued = (!success && sched.alertOnFailure) || (success && sched.alertOnSuccess);
+      }
 
       await db.insert(loginLogs).values({
         id: logId,
@@ -234,7 +257,7 @@ export async function PUT(req: NextRequest) {
       await Promise.all([
         db
           .update(credentials)
-          .set({ lastLogin: now, status: success ? "active" : "failed" })
+          .set({ lastLogin: now, status: credStatus })
           .where(eq(credentials.id, sched.credentialId)),
         db
           .update(schedules)
@@ -254,7 +277,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      mode: process.env.DEMO_MODE !== "false" ? "beta-simulation" : "worker",
+      mode: config.FAKE_DATA ? "beta-simulation" : "production",
       processed: results.length,
       schedules: results,
       timestamp: now,

@@ -16,11 +16,11 @@ export async function GET() {
       );
     }
     const [credentialStats, scheduleStats, logStats] = await Promise.all([
-      db.select({ count: sql<number>`count(*)::int` }).from(credentials).where(eq(credentials.userId, auth.userId)),
-      db.select({ count: sql<number>`count(*)::int` }).from(schedules)
+      db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(credentials).where(eq(credentials.userId, auth.userId)),
+      db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(schedules)
         .innerJoin(credentials, eq(schedules.credentialId, credentials.id))
         .where(eq(credentials.userId, auth.userId)),
-      db.select({ count: sql<number>`count(*)::int` }).from(loginLogs)
+      db.select({ count: sql<number>`CAST(count(*) AS INTEGER)` }).from(loginLogs)
         .innerJoin(credentials, eq(loginLogs.credentialId, credentials.id))
         .where(eq(credentials.userId, auth.userId)),
     ]);

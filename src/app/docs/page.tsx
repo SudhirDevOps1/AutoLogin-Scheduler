@@ -11,15 +11,15 @@ export default function DocsPage() {
           Documentation
         </h1>
         <p className="text-text-muted mt-3 text-lg">
-          Everything you need to self-host AutoLogin Scheduler on Cloudflare.
+          Self-host on Cloudflare Workers + D1, PostgreSQL, or Turso (libSQL).
         </p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-5 mb-12">
         {[
-          { icon: Code, title: "REST API", desc: "13 endpoints for auth, credentials, schedules, and logs" },
-          { icon: Server, title: "Architecture", desc: "Cloudflare Workers + D1 + Browser Rendering" },
-          { icon: Lock, title: "Security model", desc: "PBKDF2 + AES-GCM + JWT + rate limiting" },
+          { icon: Code, title: "REST API", desc: "16 endpoints for auth, credentials, schedules, and logs" },
+          { icon: Server, title: "Multi-Database", desc: "PostgreSQL, Turso (libSQL), or Cloudflare D1 — auto-detected" },
+          { icon: Lock, title: "Security model", desc: "PBKDF2 + AES-GCM + JWT + rate limiting + MX email" },
           { icon: BookOpen, title: "Quick start", desc: "Deploy in 5 minutes with npm run setup" },
         ].map((c) => (
           <div key={c.title} className="rounded-xl border border-border bg-bg-elev p-5 card-hover">
@@ -88,7 +88,32 @@ export default function DocsPage() {
           <li>✓ Account lockout (5 failures → 15 min lock)</li>
           <li>✓ Bot detection with 30+ malicious patterns (SQLi, XSS, traversal)</li>
           <li>✓ Audit log for every sensitive action</li>
+          <li>✓ MX DNS email validation (Cloudflare DoH + disposable block)</li>
         </ul>
+      </section>
+
+      <section className="mb-10">
+        <h2 className="text-2xl font-bold mb-4">Database Backends</h2>
+        <p className="text-sm text-text-muted mb-4">
+          Auto-detected from <code className="px-1.5 py-0.5 rounded bg-bg-soft text-accent text-xs">DATABASE_URL</code> scheme. Same code, zero changes.
+        </p>
+        <div className="grid md:grid-cols-3 gap-3">
+          <div className="rounded-lg border border-border bg-bg-elev p-4">
+            <div className="text-sm font-semibold text-accent mb-1">PostgreSQL</div>
+            <code className="text-xs text-text-dim">postgresql://...</code>
+            <p className="text-xs text-text-muted mt-2">Self-host or managed (Neon, Supabase, etc.)</p>
+          </div>
+          <div className="rounded-lg border border-border bg-bg-elev p-4">
+            <div className="text-sm font-semibold text-accent mb-1">Turso (libSQL)</div>
+            <code className="text-xs text-text-dim">libsql://... + TURSO_AUTH_TOKEN</code>
+            <p className="text-xs text-text-muted mt-2">Serverless SQLite, free 9GB tier</p>
+          </div>
+          <div className="rounded-lg border border-border bg-bg-elev p-4">
+            <div className="text-sm font-semibold text-accent mb-1">Cloudflare D1</div>
+            <code className="text-xs text-text-dim">DATABASE_URL=(empty)</code>
+            <p className="text-xs text-text-muted mt-2">Edge SQLite, free 5GB tier</p>
+          </div>
+        </div>
       </section>
     </main>
   );

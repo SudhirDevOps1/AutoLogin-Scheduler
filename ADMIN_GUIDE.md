@@ -16,18 +16,10 @@
 | `demo-data.ts` | FAKE_DATA engine (6 creds, 6 scheds, 42 logs) | `seedDemoWorkspace`, `isFakeData` |
 
 ### Database (`src/db/`)
-| File | Dialect | Used for |
-|------|---------|----------|
-| `schema.ts` | `pg-core` | PostgreSQL (local dev) |
-| `schema.sqlite.ts` | `sqlite-core` | Turso/libSQL + Cloudflare D1 |
-| `index.ts` | — | Auto-detect: PG > Turso > D1 |
-
-### Drizzle Kit Configs
-| File | Command | Target |
-|------|---------|--------|
-| `drizzle.config.json` | `npm run db:push` | PostgreSQL |
-| `drizzle.turso.config.ts` | `npm run db:push:turso` | Turso/libSQL |
-| `drizzle.d1.config.ts` | `npm run db:push:d1` | Cloudflare D1 |
+| File | Tables |
+|------|--------|
+| `schema.ts` | `users`, `sessions`, `credentials`, `schedules`, `login_logs`, `audit_logs`, `rate_limits` |
+| `index.ts` | PG pool + D1 detection (`HAS_PG` flag) |
 
 ### API Routes (`src/app/api/`)
 | Route File | Methods | Auth |
@@ -132,27 +124,13 @@ curl "http://localhost:3000/api/auth/check-email?email=test@gmail.com"
 
 ---
 
-## ☁️ Database Adapter (`src/db/index.ts`)
+## ☁️ Cloudflare D1 Migration
 
-The code auto-detects DB type. Priority: **Turso → PostgreSQL → D1**
+The code auto-detects D1 vs PostgreSQL:
+- `DATABASE_URL` set → PostgreSQL (Drizzle `node-postgres`)
+- `DATABASE_URL` empty → D1 mode (inject binding at runtime)
 
-```
-TURSO_DATABASE_URL  set           → Turso libSQL (@libsql/client)
-DATABASE_URL = libsql://...       → Turso libSQL
-DATABASE_URL = postgresql://...   → PostgreSQL (node-postgres)
-DATABASE_URL = (empty)            → Cloudflare D1 (runtime binding)
-```
-
-Schema files:
-- PostgreSQL: `src/db/schema.ts` (drizzle pg-core)
-- Turso + D1:  `src/db/schema.sqlite.ts` (drizzle sqlite-core)
-
-Drizzle Kit:
-```bash
-npm run db:push          # PostgreSQL
-npm run db:push:turso    # Turso/libSQL
-npm run db:push:d1       # Cloudflare D1 (wrangler)
-```
+For D1 deploy, see `wrangler.toml` and `src/worker/index.ts`.
 
 ---
 

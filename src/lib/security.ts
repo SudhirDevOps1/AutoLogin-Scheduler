@@ -73,8 +73,10 @@ export async function decryptCredential(encryptedData: string): Promise<string> 
 }
 
 function getEncryptionKey(): Buffer {
-  // Uses config.AUTH_SECRET which has a dev fallback — never throws
-  return crypto.createHash("sha256").update(config.AUTH_SECRET).digest();
+  // Uses config.ENCRYPTION_SECRET (separate key from JWT AUTH_SECRET).
+  // Key separation: JWT signing key ≠ AES-GCM encryption key.
+  // Falls back to AUTH_SECRET-derived key if ENCRYPTION_SECRET not set.
+  return crypto.createHash("sha256").update(config.ENCRYPTION_SECRET).digest();
 }
 
 // ─── JWT Tokens ───────────────────────────────────────────────────────────

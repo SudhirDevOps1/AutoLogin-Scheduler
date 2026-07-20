@@ -52,8 +52,8 @@ export default async function DashboardOverview() {
   // Stats
   const [totalStats] = await db
     .select({
-      total: sql<number>`count(*)::int`,
-      success: sql<number>`count(*) FILTER (WHERE ${loginLogs.success} = true)::int`,
+      total: sql<number>`CAST(count(*) AS INTEGER)`,
+      success: sql<number>`CAST(sum(CASE WHEN ${loginLogs.success} THEN 1 ELSE 0 END) AS INTEGER)`,
     })
     .from(loginLogs)
     .innerJoin(credentials, eq(loginLogs.credentialId, credentials.id))
@@ -61,8 +61,8 @@ export default async function DashboardOverview() {
 
   const [stats24h] = await db
     .select({
-      total: sql<number>`count(*)::int`,
-      success: sql<number>`count(*) FILTER (WHERE ${loginLogs.success} = true)::int`,
+      total: sql<number>`CAST(count(*) AS INTEGER)`,
+      success: sql<number>`CAST(sum(CASE WHEN ${loginLogs.success} THEN 1 ELSE 0 END) AS INTEGER)`,
     })
     .from(loginLogs)
     .innerJoin(credentials, eq(loginLogs.credentialId, credentials.id))
@@ -82,7 +82,7 @@ export default async function DashboardOverview() {
       stats={{
         totalCredentials: userCredentials.length,
         totalSchedules: userSchedules.length,
-        activeSchedules: userSchedules.filter((s: any) => s.enabled).length,
+        activeSchedules: userSchedules.filter((s) => s.enabled).length,
         totalLogins: totalStats?.total || 0,
         successRate:
           totalStats?.total && totalStats.total > 0

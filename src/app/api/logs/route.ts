@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
         .limit(pageSize)
         .offset((page - 1) * pageSize),
       db
-        .select({ count: sql<number>`count(*)::int` })
+        .select({ count: sql<number>`CAST(count(*) AS INTEGER)` })
         .from(loginLogs)
         .innerJoin(credentials, eq(loginLogs.credentialId, credentials.id))
         .where(and(...whereConditions)),
