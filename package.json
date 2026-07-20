@@ -24,7 +24,8 @@
     "next": "16.2.6",
     "pg": "8.20.0",
     "react": "19.2.6",
-    "react-dom": "19.2.6"
+    "react-dom": "19.2.6",
+    "worker-mailer": "^1.2.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260719.1",

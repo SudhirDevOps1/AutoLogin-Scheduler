@@ -15,7 +15,7 @@ interface EmailAlertParams {
   error?: string | null;
 }
 
-// Custom lightweight SMTP protocol client over Cloudflare TCP sockets for Cloudflare Workers
+// Custom SMTP protocol client over Cloudflare TCP sockets for Cloudflare Workers using worker-mailer
 async function sendSmtpOverWorkerSocket(
   host: string,
   port: number,
@@ -26,115 +26,25 @@ async function sendSmtpOverWorkerSocket(
   subject: string,
   html: string
 ) {
-  let connectFn: any = null;
-  try {
-    const socketsModule = "cloudflare:sockets";
-    const sockets = require(socketsModule);
-    connectFn = sockets.connect;
-  } catch (e: any) {
-    throw new Error(`Cloudflare Sockets module load failed: ${e.message || e}`);
-  }
+  const { WorkerMailer } = await import("worker-mailer");
+  
+  const mailer = await WorkerMailer.connect({
+    host,
+    port,
+    credentials: {
+      username: user,
+      password: pass,
+    },
+    authType: 'login',
+    secure: port === 465,
+  });
 
-  if (!connectFn) {
-    throw new Error("Cloudflare sockets connect API is unavailable in this environment.");
-  }
-
-  // SMTPS (port 465) requires TLS immediate connection on Cloudflare
-  const useTls = port === 465;
-  const socket = connectFn(
-    { hostname: host, port },
-    useTls ? { secureTransport: "on" } : {}
-  );
-
-  const writer = socket.writable.getWriter();
-  const reader = socket.readable.getReader();
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-
-  let buffer = "";
-  async function readLine(): Promise<string> {
-    while (!buffer.includes("\r\n")) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value);
-    }
-    const idx = buffer.indexOf("\r\n");
-    if (idx === -1) return buffer;
-    const line = buffer.substring(0, idx);
-    buffer = buffer.substring(idx + 2);
-    return line;
-  }
-
-  async function writeCmd(cmd: string) {
-    await writer.write(encoder.encode(cmd));
-  }
-
-  try {
-    // 1. Read greeting
-    let line = await readLine();
-    if (!line.startsWith("220")) throw new Error(`SMTP Greeting failed: ${line}`);
-
-    // 2. EHLO
-    await writeCmd("EHLO localhost\r\n");
-    while (true) {
-      line = await readLine();
-      if (line[3] !== "-") break;
-    }
-
-    // 3. AUTH LOGIN
-    await writeCmd("AUTH LOGIN\r\n");
-    line = await readLine();
-    if (!line.startsWith("334")) throw new Error(`AUTH LOGIN initialization failed: ${line}`);
-
-    // Send Base64 Username
-    await writeCmd(btoa(user) + "\r\n");
-    line = await readLine();
-    if (!line.startsWith("334")) throw new Error(`Username rejected: ${line}`);
-
-    // Send Base64 Password
-    await writeCmd(btoa(pass) + "\r\n");
-    line = await readLine();
-    if (!line.startsWith("235")) throw new Error(`Password rejected / Authentication failed: ${line}`);
-
-    // 4. MAIL FROM
-    await writeCmd(`MAIL FROM:<${from}>\r\n`);
-    line = await readLine();
-    if (!line.startsWith("250")) throw new Error(`MAIL FROM command failed: ${line}`);
-
-    // 5. RCPT TO
-    await writeCmd(`RCPT TO:<${to}>\r\n`);
-    line = await readLine();
-    if (!line.startsWith("250")) throw new Error(`RCPT TO command failed: ${line}`);
-
-    // 6. DATA
-    await writeCmd("DATA\r\n");
-    line = await readLine();
-    if (!line.startsWith("354")) throw new Error(`DATA start rejected: ${line}`);
-
-    // Send MIME headers and HTML body
-    const emailContent = [
-      `From: ${from}`,
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      "MIME-Version: 1.0",
-      "Content-Type: text/html; charset=utf-8",
-      "",
-      html,
-      ".",
-      ""
-    ].join("\r\n");
-
-    await writeCmd(emailContent);
-    line = await readLine();
-    if (!line.startsWith("250")) throw new Error(`Sending message payload failed: ${line}`);
-
-    // 7. QUIT
-    await writeCmd("QUIT\r\n");
-  } finally {
-    try {
-      socket.close();
-    } catch (_) {}
-  }
+  await mailer.send({
+    from: { name: 'AutoLogin Alert', email: from },
+    to: { name: to, email: to },
+    subject,
+    html,
+  });
 }
 
 export async function sendEmailAlert({
