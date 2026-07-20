@@ -1,4 +1,4 @@
-# Contributing to AutoLogin Scheduler
+# Contributing to AutoLogin Scheduler v1.2.0
 
 Thank you for your interest in improving AutoLogin Scheduler! Here's how to contribute.
 
@@ -38,7 +38,18 @@ npm run build
 
 # Manual API test
 curl http://localhost:3000/api/health
+curl http://localhost:3000/api/version
+
+# Deploy to Cloudflare (Wrangler v4 required)
+npm run build
+npx wrangler deploy --assets out/
 ```
+
+> **Security Note:** If you add a new API endpoint, make sure it:
+> - Calls `requireAuth()` for protected routes
+> - Calls `checkRateLimit()` to prevent abuse
+> - Validates all inputs with `detectMaliciousInput()`
+> - Is registered in `src/worker/index.ts` Hono router
 
 ## 📋 Contribution Guidelines
 
@@ -51,9 +62,10 @@ curl http://localhost:3000/api/health
 ### 2. Pull Request Process
 1. Create a feature branch: `git checkout -b feature/your-feature`
 2. Make your changes with **descriptive commits**
-3. Update `README.md` if you add features
-4. Ensure `npm run build` passes
-5. Open a PR against `main` with:
+3. Update `README.md` and `CHANGELOG.md` if you add features
+4. Update `SECURITY.md` if you add/change security behavior
+5. Ensure `npm run build` passes with zero TypeScript errors
+6. Open a PR against `main` with:
    - Clear description of the change
    - Screenshots for UI changes
    - Link to related issue (if any)

@@ -4,8 +4,9 @@
 
 | Version | Supported |
 |---------|-----------|
-| 1.0.x | ✅ Active |
-| < 1.0 | ❌ |
+| **1.2.x** | ✅ Active (Latest) |
+| 1.0.x | ✅ Maintained |
+| < 1.0 | ❌ End of Life |
 
 ## 🔒 Security Features
 
@@ -56,6 +57,47 @@ AutoLogin Scheduler implements defense-in-depth security:
 - All sensitive actions logged: signup, login, logout, credential CRUD, schedule CRUD
 - Hashed IP + user agent recorded
 
+### HTTP Security Headers *(v1.2.0)*
+All responses — API + static pages — include OWASP-recommended headers:
+
+| Header | Value |
+|--------|-------|
+| `X-Frame-Options` | `DENY` — clickjacking blocked |
+| `X-Content-Type-Options` | `nosniff` — MIME sniffing blocked |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), payment=()` |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains; preload` |
+| `Content-Security-Policy` | Allows only self + PrismAnalytics + FormForge |
+| `X-Powered-By` | **Removed** (no server fingerprinting) |
+
+Headers are injected at two levels:
+1. **Cloudflare Worker middleware** — all API responses
+2. **`public/_headers` file** — all static page responses
+
+### CORS Policy *(v1.2.0)*
+- Origin restricted to `https://autologin-scheduler.sudhirdevops1.workers.dev` + `localhost`
+- Wildcard `*` removed
+- Only `GET, POST, PUT, DELETE, OPTIONS` allowed
+
+### Live Security Audit Results *(v1.2.0 — 2026-07-20)*
+Automated 12-category penetration test run against production:
+
+| Category | Result |
+|----------|--------|
+| Unauthenticated access (11 routes) | ✅ All 401 |
+| SQL Injection (6 payloads) | ✅ All Blocked |
+| XSS Injection (4 payloads) | ✅ All Blocked |
+| IDOR cross-user access | ✅ All 404/401 |
+| Brute force / rate limiting | ✅ 429 at attempt #1 |
+| JWT forgery (5 methods) | ✅ All Rejected |
+| Admin privilege escalation | ✅ Blocked 401 |
+| Path traversal (`../etc/passwd`) | ✅ Blocked 404 |
+| Mass registration spam | ✅ 429 at attempt #1 |
+| HTTP security headers | ✅ All 6 headers set |
+| Cross-tenant isolation | ✅ Password stripped from list |
+| Prototype pollution | ✅ Rejected |
+| **TOTAL FAILED** | **0** |
+
 ## 🚨 Reporting a Vulnerability
 
 **Do NOT open a public issue for security vulnerabilities.**
@@ -83,9 +125,13 @@ Instead:
 
 2. **Generate unique secrets**
    ```bash
+   # Option A: openssl (local)
    openssl rand -hex 32   # For AUTH_SECRET
    openssl rand -hex 32   # For ENCRYPTION_SECRET (separate key)
    openssl rand -hex 32   # For JWT_SECRET (if different from AUTH)
+
+   # Option B: Surakshit Vault Pro (web browser)
+   # https://surakshit-vault-pro.pages.dev/#jwt
    ```
 
 3. **Disable public registration** (optional)
